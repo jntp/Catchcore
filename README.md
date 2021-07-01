@@ -1,2 +1,2 @@
 # Catchcore
-The name Catchcore is a portmanteau between the words CATCHment and the CORE(s) of a narrow cold frontal rainband (NCFR). When an NCFR core intersects with a catchment (or watershed) of interest, they become one--hence the name "Catchcore." More details to come later ;) 
+Catchcore is a portmanteau between a hydrologic CATCHment and a CORE of a narrow cold frontal rainband (NCFR). An NCFR contains gaps and cores where cores are areas of very intense precipitation and gaps are areas of relatively light precipitation. When an NCFR core intersects with a catchment (or watershed) of interest, they become one--hence the name "Catchcore." More details to come later ;) 
