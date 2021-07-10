@@ -1,21 +1,16 @@
 import geopandas
 import matplotlib.pyplot as plt
 import cartopy.crs as ccrs
-import cartopy.feature as cfeature 
+import cartopy.feature as cfeature
+from datetime import datetime, timedelta
+from siphon.radarserver import RadarServer
+import metpy.plots as mpplots
+import numpy as np
 
-# Create Map
-def new_map(fig, lon, lat, gdf):
+# Create a base map to display Watershed and 
+def new_map(fig, lon, lat):
   # Create projection centered on the radar. Allows us to use x and y relative to the radar
   proj = ccrs.LambertConformal(central_longitude = lon, central_latitude = lat)
-  
-  # Convert into a 'proj4' string/dict compatible with GeoPandas
-  crs_proj4 = proj.proj4_init
-  df_ae = gdf.to_crs(crs_proj4) 
-
-  # Add new geometries here
-  # new_geometries = [proj.project_geometry(ii, src_crs = crs) for ii in df_ae['geometry'].values]
-
-  # fig, ax = plt.subplots(subplot_kw = {'projection': proj}
 
   # New axes with the specified projection
   ax = fig.add_axes([0.02, 0.02, 0.96, 0.96], projection = proj)
@@ -24,32 +19,87 @@ def new_map(fig, lon, lat, gdf):
   ax.add_feature(cfeature.COASTLINE.with_scale('50m'), linewidth = 2)
   ax.add_feature(cfeature.STATES.with_scale('50m'))
 
-  ax.add_geometries(df_ae['geometry'], crs = proj)
-
   return ax
 
+# Create an instance of RadarServer and query data from the NEXRAD server based on given time and GPS coordinates
+def nexrad_query(lon, lat, year, month, day, hour):
+  rs = RadarServer('http://tds-nexrad.scigw.unidata.ucar.edu/thredds/radarServer/nexrad/level2/S3/')
+  query = rs.query()
+  dt = datetime(year, month, day, month) # time in UTC
+  query.lonlat_point(lon, lat).time_range(dt, dt + timedelta(hours = 1))
+  catalog = rs.get_catalog(query)
+  ds = catalog.datasets[0]
+  data = ds.remote_access()
+
+  return catalog, data
+
+# Convert data to float values
+def raw_to_masked_float(var, data):
+  # Convert unsigned values to range [-127, 128] to [0, 255]
+  if var._Unsigned:
+    data = data & 255
+
+    # Mask missing points
+    data = np.ma.array(data, mask = data == 0)
+
+    # Convert to float using the scale and offset 
+    return data * var.scale_factor + var.add_offset 
+
+# Convert polar coordinates to Cartesian (x, y)
+def polar_to_cartesian(az, rng):
+  # x = r*cos*theta, y = r*sin*theta where theta is in radians
+  az_rad = np.deg2rad(az)[:, None]
+  x = rng * np.sin(az_rad) 
+  y = rng * np.cos(az_rad)
+
+  return x, y
+
+# Create a list that contains a color mesh for each time stamp
+def create_mesh(catalog, ref_cmap, ref_norm):
+  # Add for loop later
+  # mesh = []
+  # Pull dataset object out of each list of item
+  data = catalog.datasets[0].remote_access() # change later 
+
+  # Pull data as well as variables for azimuth and range
+  sweep = 0
+  ref_var = data.variables['Reflectivity_HI']
+  rng = data.variables['distanceR_HI'][:]
+  az = data.variables['azimuthR_HI'][sweep]
+
+  # Convert raw data to floating point values and polar coordinates to Cartesian
+  ref = raw_to_masked_float(ref_var, ref_var[sweep])
+  x, y = polar_to_cartesian(az, rng)
+
+  # Plot the data
+  mesh = ax.pcolormesh(x, y, ref, cmap = ref_cmap, norm = ref_norm, zorder = 0)
+  # Add text later
+
+  return mesh 
+
+## ** Main Function where everthing happens **
 def main():
   # Load watershed
   watershed = geopandas.read_file("santa_ana_r_a.geojson")
 
-  # Create new map based off of CRS Projection
-  proj = ccrs.LambertConformal(central_longitude = -117.636, central_latitude = 33.818)
+  # Query data from NEXRAD server
+  catalog, data = nexrad_query(-117.636, 33.818, 2017, 2, 18, 1)
 
-  # Create a new figure
+  # Create a new figure and map
   fig = plt.figure(figsize = (10, 10))
-
-  # New axes with the specified projection
-  ax = fig.add_axes([0.02, 0.02, 0.96, 0.96], projection = proj)
+  ax = new_map(fig, -117.637, 33.818)
 
   # Set limits in lat/lon space
-  ax.set_extent([-121, -114, 32, 36])
+  ax.set_extent([-121, -114, 32, 36]) # SoCal 
 
-  # Add coastlines andd states
-  ax.add_feature(cfeature.COASTLINE.with_scale('50m'), linewidth = 2)
-  ax.add_feature(cfeature.STATES.with_scale('50m'))
+  # Get color table and value mapping info for the NWS Reflectivity data 
+  ref_norm, ref_cmap = mpplots.ctables.registry.get_with_steps('NWSReflectivity', 5, 5)
 
   # Add watershed geometry
   ax.add_geometries(watershed.geometry, crs = ccrs.PlateCarree(), zorder = 5, edgecolor = 'blue')
+
+  # Add colormesh (radar reflectivity)
+  ax.pcolormesh(x, y, ref, cmap = ref_cmap, norm = ref_norm, zorder = 0) # call the mesh function later
 
   plt.show()
 
