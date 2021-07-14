@@ -72,10 +72,10 @@ def create_mesh(catalog, ref_cmap, ref_norm):
   x, y = polar_to_cartesian(az, rng)
 
   # Plot the data
-  mesh = ax.pcolormesh(x, y, ref, cmap = ref_cmap, norm = ref_norm, zorder = 0)
+  # mesh = ax.pcolormesh(x, y, ref, cmap = ref_cmap, norm = ref_norm, zorder = 0)
   # Add text later
 
-  return mesh 
+  return ref, x, y # later should be return mesh  
 
 ## ** Main Function where everthing happens **
 def main():
@@ -87,7 +87,7 @@ def main():
 
   # Create a new figure and map
   fig = plt.figure(figsize = (10, 10))
-  ax = new_map(fig, -117.637, 33.818)
+  ax = new_map(fig, -117.636, 33.818)
 
   # Set limits in lat/lon space
   ax.set_extent([-121, -114, 32, 36]) # SoCal 
@@ -96,15 +96,23 @@ def main():
   ref_norm, ref_cmap = mpplots.ctables.registry.get_with_steps('NWSReflectivity', 5, 5)
 
   # Add watershed geometry
-  ax.add_geometries(watershed.geometry, crs = ccrs.PlateCarree(), zorder = 5, edgecolor = 'blue')
+  ax.add_geometries(watershed.geometry, crs = ccrs.PlateCarree(), zorder = 1, facecolor = 'red', edgecolor = 'red')
 
   # Add colormesh (radar reflectivity)
-  ax.pcolormesh(x, y, ref, cmap = ref_cmap, norm = ref_norm, zorder = 0) # call the mesh function later
+  ref, x, y = create_mesh(catalog, ref_cmap, ref_norm) 
+  ax.pcolormesh(x, y, ref, cmap = ref_cmap, norm = ref_norm, zorder = 2) # call the mesh function later
+
+  # Test
+  reflectivity = data.variables['Reflectivity_HI']
+  print(reflectivity[0][0:4][0:4]) # test
+  print(reflectivity)
 
   plt.show()
 
 if __name__ == '__main__':
   main()
 
-# Next step... Clean up code
 # Also next big step would be figuring out to incorporate NCFR core as "polygons"
+# Can just identify points where dbz > 45, then possibly use clustering algorithm to identify NCFR
+# Then create polygon out of cluster values? 
+# Will have to find a way to integrate reflectivity data of the different sitees
