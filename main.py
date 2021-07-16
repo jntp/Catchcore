@@ -77,7 +77,21 @@ def create_mesh(catalog, ref_cmap, ref_norm):
 
   return ref, x, y # later should be return mesh  
 
-## ** Main Function where everthing happens **
+# Still working on this lol
+def identifyNCFR(ref):
+  # Create array of zeros (boolean) which will be used to locate where the NCFR is on x, y, ref matrices
+  locator = np.zeros(720, 1832)
+
+  for i, value in enumerate(ref):
+    for j, value in enumerate(ref):
+      if value > 45: 
+        locator[i][j] = 1
+
+  np.array(locator, dtype = bool) # Convert boolean matrix
+
+  return locator 
+
+## ** Main Function where everything happens **
 def main():
   # Load watershed
   watershed = geopandas.read_file("santa_ana_r_a.geojson")
@@ -104,14 +118,17 @@ def main():
 
   # Test
   reflectivity = data.variables['Reflectivity_HI']
-  print(reflectivity[0][0:4][0:4]) # test
   print(reflectivity)
+  print(x[719][1831])
+  print(y[719][1831])
+  print(ref[719][1831])
 
   plt.show()
 
 if __name__ == '__main__':
   main()
 
+# Figure out what ref values correspond to what reflectivity
 # Also next big step would be figuring out to incorporate NCFR core as "polygons"
 # Can just identify points where dbz > 45, then possibly use clustering algorithm to identify NCFR
 # Then create polygon out of cluster values? 
