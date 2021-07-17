@@ -80,14 +80,12 @@ def create_mesh(catalog, ref_cmap, ref_norm):
 # Still working on this lol
 def identifyNCFR(ref):
   # Create array of zeros (boolean) which will be used to locate where the NCFR is on x, y, ref matrices
-  locator = np.zeros(720, 1832)
+  locator = np.zeros((720, 1832), dtype = bool)  
 
-  for i, value in enumerate(ref):
-    for j, value in enumerate(ref):
-      if value > 45: 
-        locator[i][j] = 1
-
-  np.array(locator, dtype = bool) # Convert boolean matrix
+  for i, column in enumerate(ref):
+    for j, value in enumerate(column):
+      if value > 45:
+        locator[i][j] = True
 
   return locator 
 
@@ -117,19 +115,18 @@ def main():
   ax.pcolormesh(x, y, ref, cmap = ref_cmap, norm = ref_norm, zorder = 2) # call the mesh function later
 
   # Test
-  reflectivity = data.variables['Reflectivity_HI']
-  print(reflectivity)
-  print(x[719][1831])
-  print(y[719][1831])
-  print(ref[719][1831])
+  # locator = identifyNCFR(ref)
+  # gdf['boundary'] = watershed.boundary
+  test = watershed.centroid[0]
+  print(test)
 
   plt.show()
 
 if __name__ == '__main__':
   main()
 
-# Figure out what ref values correspond to what reflectivity
-# Also next big step would be figuring out to incorporate NCFR core as "polygons"
-# Can just identify points where dbz > 45, then possibly use clustering algorithm to identify NCFR
-# Then create polygon out of cluster values? 
+# Hard part.... how to acquire data from geodataframe? Then how should we identify the "intersection?"
+# 1st way is to create polygon out of locator?
+# 2nd way is to go the other direction... extrapolate "Cartesian" data from watershed polygon
+# 3rd way is to experiment with using centroids, boundaries, etc. as possible metrics
 # Will have to find a way to integrate reflectivity data of the different sitees
