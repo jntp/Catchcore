@@ -6,6 +6,7 @@ from datetime import datetime, timedelta
 from siphon.radarserver import RadarServer
 import metpy.plots as mpplots
 import numpy as np
+import netCDF4 as nc 
 
 # Create a base map to display Watershed and 
 def new_map(fig, lon, lat):
@@ -94,12 +95,16 @@ def main():
   # Load watershed
   watershed = geopandas.read_file("santa_ana_r_a.geojson")
 
+  # Load NEXRAD data from netcdf4 file
+  ncfile = '/media/jntp/D2BC15A1BC1580E1/NCFRs/20170217_18.nc'
+  nexrad_data = nc.Dataset(ncfile) 
+
   # Query data from NEXRAD server
-  catalog, data = nexrad_query(-117.636, 33.818, 2017, 2, 18, 1)
+  catalog, data = nexrad_query(-117.143, 32.869, 2017, 2, 18, 1)
 
   # Create a new figure and map
   fig = plt.figure(figsize = (10, 10))
-  ax = new_map(fig, -117.636, 33.818)
+  ax = new_map(fig, -117.143, 32.869) # -117.636, 33.818 
 
   # Set limits in lat/lon space
   ax.set_extent([-121, -114, 32, 36]) # SoCal 
@@ -117,16 +122,23 @@ def main():
   # Test
   # locator = identifyNCFR(ref)
   # gdf['boundary'] = watershed.boundary
-  test = watershed.centroid[0]
-  print(test)
+  # test = watershed.centroid[0]
+  # print(test)
+  # print(x.max()) 
+  # print(x.min())
+  # print(y.max())
+  # print(y.min())
+  print(nexrad_data)
 
   plt.show()
 
 if __name__ == '__main__':
   main()
 
+# Lol... now instead we got to plot the netcdf4 file instead...
+# Right now.... learning to convert between Cartesian and lat lon... Use different radar time frames 
+# to ascertain relationship
 # Hard part.... how to acquire data from geodataframe? Then how should we identify the "intersection?"
 # 1st way is to create polygon out of locator?
 # 2nd way is to go the other direction... extrapolate "Cartesian" data from watershed polygon
 # 3rd way is to experiment with using centroids, boundaries, etc. as possible metrics
-# Will have to find a way to integrate reflectivity data of the different sitees
