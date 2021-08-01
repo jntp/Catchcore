@@ -1,8 +1,25 @@
 import geopandas
 import matplotlib.pyplot as plt
-# from mpl_toolkits.basemap import Basemap # Don't use; deprecated!!!
+import cartopy
+import cartopy.crs as ccrs
+import cartopy.feature as cfeature 
 from netCDF4 import Dataset
 import numpy as np
+import metpy.plots as mpplots 
+
+# Create a base map to display Watershed and 
+def new_map(fig, lon, lat):
+  # Create projection centered on the radar. Allows us to use x and y relative to the radar
+  proj = ccrs.LambertConformal(central_longitude = lon, central_latitude = lat)
+
+  # New axes with the specified projection
+  ax = fig.add_axes([0.02, 0.02, 0.96, 0.96], projection = proj)
+
+  # Add coastlines and states
+  ax.add_feature(cfeature.COASTLINE.with_scale('50m'), linewidth = 2)
+  ax.add_feature(cfeature.STATES.with_scale('50m'))
+
+  return ax
 
 ## ** Main Function where everything happens **
 def main():
@@ -12,14 +29,38 @@ def main():
 
   # Get data from netcdf file
   lons = nexdata['Longitude'][:][:]
-  latd = nexdata['Latitude'][:][:]
-  print(lons)
+  lats = nexdata['Latitude'][:][:]
+  refs = nexdata['Reflectivity'][0]
+  print(lons[:4][:4])
 
-  # Get some parameters for a Stereographic Projection
-  # lon_0 = lons.mean()
-  # lat_0
+  # Create a new figure and map 
+  fig = plt.figure(figsize = (10, 10))
+  ax = new_map(fig, -117.636, 33.818) # -117.636, 33.818 
+
+  # Set limits in lat/lon space
+  ax.set_extent([-121, -114, 32, 36]) # SoCal
+
+  # Get color table and value mapping info for the NWS Reflectivity data
+  ref_norm, ref_cmap = mpplots.ctables.registry.get_with_steps('NWSReflectivity', 5, 5) 
+
+  # Transform to this projection
+  use_proj = ccrs.LambertConformal() 
+
+  # Transfer lats, lons matrices from geodetic lat/lon to LambertConformal
+  out_xyz = use_proj.transform_points(ccrs.Geodetic(), lons, lats)
+  
+  # Separate x, y from out_xyz
+  x = out_xyz[:, :, 0]
+  y = out_xyz[:, :, 1]
+
+  # Test
+  ax.pcolormesh(x, y, refs, cmap = ref_cmap, norm = ref_norm, zorder = 2) 
+ 
+  # plt.show()
 
 if __name__ == '__main__':
   main() 
 
+# Trying to display the colormesh on map. Check how you're pulling lats, lons from data... perhaps it
+# has something to do with the negative longitude???
 # Check cartopy documentation??? Maybe able to find more about obtaining x, y variables
