@@ -26,16 +26,20 @@ def main():
   # Load NEXRAD data from netcdf4 file
   ncfile = '/media/jntp/D2BC15A1BC1580E1/NCFRs/20170217_18.nc'
   nexdata = Dataset(ncfile, mode = 'r')
+  print(nexdata)
 
   # Get data from netcdf file
   lons = nexdata['Longitude'][:][:]
   lats = nexdata['Latitude'][:][:]
   refs = nexdata['Reflectivity'][0]
-  print(lons[:4][:4])
+
+  # Specify a central longitude and latitude (i.e. reference point)
+  central_lon = -117.636
+  central_lat = 33.818
 
   # Create a new figure and map 
   fig = plt.figure(figsize = (10, 10))
-  ax = new_map(fig, -117.636, 33.818) # -117.636, 33.818 
+  ax = new_map(fig, central_lon, central_lat) # -117.636, 33.818 
 
   # Set limits in lat/lon space
   ax.set_extent([-121, -114, 32, 36]) # SoCal
@@ -44,23 +48,21 @@ def main():
   ref_norm, ref_cmap = mpplots.ctables.registry.get_with_steps('NWSReflectivity', 5, 5) 
 
   # Transform to this projection
-  use_proj = ccrs.LambertConformal() 
+  use_proj = ccrs.LambertConformal(central_longitude = central_lon, central_latitude = central_lat)
 
   # Transfer lats, lons matrices from geodetic lat/lon to LambertConformal
   out_xyz = use_proj.transform_points(ccrs.Geodetic(), lons, lats)
   
   # Separate x, y from out_xyz
-  x = out_xyz[:, :, 0]
-  y = out_xyz[:, :, 1]
+  x = out_xyz[:, :, 0] 
+  y = out_xyz[:, :, 1] 
 
   # Test
   ax.pcolormesh(x, y, refs, cmap = ref_cmap, norm = ref_norm, zorder = 2) 
  
-  # plt.show()
+  plt.show()
 
 if __name__ == '__main__':
   main() 
 
-# Trying to display the colormesh on map. Check how you're pulling lats, lons from data... perhaps it
-# has something to do with the negative longitude???
-# Check cartopy documentation??? Maybe able to find more about obtaining x, y variables
+# Next step... how to remove the ugly blue background on radar data??
