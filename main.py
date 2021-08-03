@@ -23,6 +23,9 @@ def new_map(fig, lon, lat):
 
 ## ** Main Function where everything happens **
 def main():
+  # Load watershed
+  watershed = geopandas.read_file("santa_ana_r_a.geojson")
+
   # Load NEXRAD data from netcdf4 file
   ncfile = '/media/jntp/D2BC15A1BC1580E1/NCFRs/20170217_18.nc'
   nexdata = Dataset(ncfile, mode = 'r')
@@ -55,14 +58,27 @@ def main():
   
   # Separate x, y from out_xyz
   x = out_xyz[:, :, 0] 
-  y = out_xyz[:, :, 1] 
+  y = out_xyz[:, :, 1]
 
-  # Test
-  ax.pcolormesh(x, y, refs, cmap = ref_cmap, norm = ref_norm, zorder = 2) 
+  test = np.empty((1336, 1506))
+  test[:] = np.nan
+
+  # Find a more efficient way for this? this is too slow***
+  for i, column in enumerate(refs):
+    for j, value in enumerate(column):
+      if refs[i][j] >= 5:
+        test[i][j] = refs[i][j]
+
+  # Add watershed geometry 
+  ax.add_geometries(watershed.geometry, crs = ccrs.PlateCarree(), zorder = 1, facecolor = 'red', edgecolor = 'red')
+
+  # Add colormesh (radar reflectivity) 
+  ax.pcolormesh(x, y, test, cmap = ref_cmap, norm = ref_norm, zorder = 2) 
  
   plt.show()
 
 if __name__ == '__main__':
   main() 
 
-# Next step... how to remove the ugly blue background on radar data??
+# First clean, optimize, and annotate code
+# Next step identify NCFR and the intersection

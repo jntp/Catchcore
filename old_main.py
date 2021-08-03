@@ -117,12 +117,10 @@ def main():
 
   # Add colormesh (radar reflectivity)
   ref, x, y = create_mesh(catalog, ref_cmap, ref_norm) 
-  print(x[0][0])
-  # ax.pcolormesh(x, y, ref, cmap = ref_cmap, norm = ref_norm, zorder = 2) # call the mesh function later
+  print(ref)
+  ax.pcolormesh(x, y, ref, cmap = ref_cmap, norm = ref_norm, zorder = 2) # call the mesh function later
 
-  # ax.pcolormesh(longitude, latitude, reflectivity, cmap = ref_cmap, norm = ref_norm, zorder = 2)
-
-  # plt.show()
+  plt.show()
 
 if __name__ == '__main__':
   main()
