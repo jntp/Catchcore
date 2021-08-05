@@ -60,14 +60,26 @@ def main():
   x = out_xyz[:, :, 0] 
   y = out_xyz[:, :, 1]
 
-  test = np.empty((1336, 1506))
-  test[:] = np.nan
+  new_refs = np.empty((1336, 1506))
+  new_refs[:] = np.nan
+
+  # Find a numpy function that gives you the VALUES based off of specified indices
+  indices = np.where(refs >= 5)
+  i = indices[0]
+  j = indices[1]
+  results = refs[refs >= 5]
+
+  # To find coordinate, take i * 1506 + j 
+
+  # How to make an array of the results via incremental i and j (no for loops please...)?
+
+  testmatrix.put([testindex1, testindex2], [24, -56])
 
   # Find a more efficient way for this? this is too slow***
-  for i, column in enumerate(refs):
-    for j, value in enumerate(column):
-      if refs[i][j] >= 5:
-        test[i][j] = refs[i][j]
+  # for i, column in enumerate(refs):
+    # for j, value in enumerate(column):
+      # if refs[i][j] >= 5:
+        # test[i][j] = refs[i][j]
 
   # Add watershed geometry 
   ax.add_geometries(watershed.geometry, crs = ccrs.PlateCarree(), zorder = 1, facecolor = 'red', edgecolor = 'red')
@@ -75,10 +87,11 @@ def main():
   # Add colormesh (radar reflectivity) 
   ax.pcolormesh(x, y, test, cmap = ref_cmap, norm = ref_norm, zorder = 2) 
  
-  plt.show()
+  # plt.show()
 
 if __name__ == '__main__':
   main() 
 
+# Address Github Deprecation Notice!!!
 # First clean, optimize, and annotate code
 # Next step identify NCFR and the intersection
