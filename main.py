@@ -84,14 +84,20 @@ def main():
   m = ncfr_indices[0]
   n = ncfr_indices[1]
   ncfr_refs = new_refs[new_refs >= 45] 
-  
+  paired_coords = np.column_stack((m, n)) # join m and n elements to form pairs
+
+  # Make polygon lol
+  testpoly = Polygon(paired_coords)
+  print(testpoly.exterior.coords)
+  # Figure out how to plot this polygon?? LOL
+
   # Create NCFR polygon
   # Can create matrix full of zeros with length m and n
   # Numpy should have a function stringing together x and y variables? 
   # Plug into geopandas polygon function  
 
   # Add colormesh (radar reflectivity) 
-  ax.pcolormesh(x, y, new_refs, cmap = ref_cmap, norm = ref_norm, zorder = 2) 
+  # ax.pcolormesh(x, y, new_refs, cmap = ref_cmap, norm = ref_norm, zorder = 2) 
  
   plt.show()
 
