@@ -35,7 +35,7 @@ def main():
   # Get data from netcdf file
   lons = nexdata['Longitude'][:][:]
   lats = nexdata['Latitude'][:][:]
-  refs = nexdata['Reflectivity'][0]
+  refs = nexdata['Reflectivity'][20]
 
   # Specify a central longitude and latitude (i.e. reference point)
   central_lon = -117.636
@@ -61,7 +61,7 @@ def main():
   x = out_xyz[:, :, 0] 
   y = out_xyz[:, :, 1]
 
-  new_refs = np.empty((1336, 1506))
+  new_refs = np.empty((1336, 1506)) 
   new_refs[:] = np.nan
 
   # Find a numpy function that gives you the VALUES based off of specified indices
@@ -79,16 +79,32 @@ def main():
   # Add watershed geometry 
   ax.add_geometries(watershed.geometry, crs = ccrs.PlateCarree(), zorder = 1, facecolor = 'red', edgecolor = 'red')
 
+  # Test
   # Identify NCFR; use reflectivity >= 45 dbz as the ncfr threshold
+  ncfr = np.empty((1336, 1506))
+  ncfr[:] = np.nan 
   ncfr_indices = np.where(new_refs >= 45)
   m = ncfr_indices[0]
   n = ncfr_indices[1]
-  ncfr_refs = new_refs[new_refs >= 45] 
-  paired_coords = np.column_stack((m, n)) # join m and n elements to form pairs
+  ncfr_refs = new_refs[new_refs >= 45]
+  ncfr_full_indices = m * 1506 + n
+  np.put(ncfr, ncfr_full_indices, ncfr_refs)
+
+  # These are indices, not x and y values!
+  # Maybe find a completely new way... this way is not working.... 
+  # x_m = x[m]
+  # y_n = x[n] # test
+  # paired_coords = np.column_stack((x_m, y_n)) # join m and n elements to form pairs
+  # plt.plot(paired_coords)
 
   # Make polygon lol
-  testpoly = Polygon(paired_coords)
-  print(testpoly.exterior.coords)
+  # testpoly = Polygon(paired_coords)
+  # plt.plot(*testpoly.exterior.xy)
+
+  # Test Polygon
+  testpolygon = Polygon([(5, 5), (5, 2000), (2000, 2000), (2000, 5)])
+  # plt.plot(testpolygon)
+
   # Figure out how to plot this polygon?? LOL
 
   # Create NCFR polygon
@@ -97,12 +113,17 @@ def main():
   # Plug into geopandas polygon function  
 
   # Add colormesh (radar reflectivity) 
-  # ax.pcolormesh(x, y, new_refs, cmap = ref_cmap, norm = ref_norm, zorder = 2) 
- 
+  ax.pcolormesh(x, y, new_refs, cmap = ref_cmap, norm = ref_norm, zorder = 2) 
+  print(new_refs)
+  print(x)
+  print(y)
+
   plt.show()
 
 if __name__ == '__main__':
   main() 
 
+# Figure out how the reflectivity values are mapped (the coordinates)
+# Look up how to find coordinate of something with matplotlib
 # Next step identify NCFR and the intersection
 # Clean code later
