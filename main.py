@@ -1,4 +1,4 @@
-import geopandas
+import geopandas as gpd
 import matplotlib.pyplot as plt
 import cartopy
 import cartopy.crs as ccrs
@@ -25,7 +25,7 @@ def new_map(fig, lon, lat):
 ## ** Main Function where everything happens **
 def main():
   # Load watershed
-  watershed = geopandas.read_file("santa_ana_r_a.geojson")
+  watershed = gpd.read_file("santa_ana_r_a.geojson")
 
   # Load NEXRAD data from netcdf4 file
   ncfile = '/media/jntp/D2BC15A1BC1580E1/NCFRs/20170217_18.nc'
@@ -79,51 +79,33 @@ def main():
   # Add watershed geometry 
   ax.add_geometries(watershed.geometry, crs = ccrs.PlateCarree(), zorder = 1, facecolor = 'red', edgecolor = 'red')
 
-  # Test
   # Identify NCFR; use reflectivity >= 45 dbz as the ncfr threshold
   ncfr = np.empty((1336, 1506))
   ncfr[:] = np.nan 
   ncfr_indices = np.where(new_refs >= 45)
-  m = ncfr_indices[0]
-  n = ncfr_indices[1]
+  m = ncfr_indices[0] # size 83887
+  n = ncfr_indices[1] # size 83887
   ncfr_refs = new_refs[new_refs >= 45]
   ncfr_full_indices = m * 1506 + n
   np.put(ncfr, ncfr_full_indices, ncfr_refs)
 
-  # These are indices, not x and y values!
-  # Maybe find a completely new way... this way is not working.... 
-  # x_m = x[m]
-  # y_n = x[n] # test
-  # paired_coords = np.column_stack((x_m, y_n)) # join m and n elements to form pairs
-  # plt.plot(paired_coords)
+  # Obtain the x and y coordinates from the NCFR indices
+  x_ncfr = x[m, n] 
+  y_ncfr = y[m, n] 
 
-  # Make polygon lol
-  # testpoly = Polygon(paired_coords)
-  # plt.plot(*testpoly.exterior.xy)
-
-  # Test Polygon
-  testpolygon = Polygon([(5, 5), (5, 2000), (2000, 2000), (2000, 5)])
-  # plt.plot(testpolygon)
-
-  # Figure out how to plot this polygon?? LOL
-
-  # Create NCFR polygon
-  # Can create matrix full of zeros with length m and n
-  # Numpy should have a function stringing together x and y variables? 
-  # Plug into geopandas polygon function  
+  # Test 
+  paired_coords = np.column_stack((x_ncfr, y_ncfr)) # join m and n elements to form pairs
+  testpoly = Polygon(paired_coords)
+  test_gdf = gpd.GeoDataFrame(geometry = [testpoly])
+  test_gdf.plot(ax = ax) 
 
   # Add colormesh (radar reflectivity) 
   ax.pcolormesh(x, y, new_refs, cmap = ref_cmap, norm = ref_norm, zorder = 2) 
-  print(new_refs)
-  print(x)
-  print(y)
 
   plt.show()
 
 if __name__ == '__main__':
   main() 
 
-# Figure out how the reflectivity values are mapped (the coordinates)
-# Look up how to find coordinate of something with matplotlib
 # Next step identify NCFR and the intersection
 # Clean code later
