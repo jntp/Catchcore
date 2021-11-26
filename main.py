@@ -7,6 +7,7 @@ from netCDF4 import Dataset
 import numpy as np
 import metpy.plots as mpplots 
 from shapely.geometry import Polygon
+from libs.segmentation import * 
 
 # Create a base map to display Watershed and 
 def new_map(fig, lon, lat):
@@ -91,18 +92,15 @@ def main():
 
   # Obtain the x and y coordinates from the NCFR indices
   x_ncfr = x[m, n] 
-  y_ncfr = y[m, n] 
-
-  # Test 
-  paired_coords = np.column_stack((x_ncfr, y_ncfr)) # join m and n elements to form pairs
-  testpoly = Polygon(paired_coords)
-  test_gdf = gpd.GeoDataFrame(geometry = [testpoly])
-  test_gdf.plot(ax = ax) 
+  y_ncfr = y[m, n]
+ 
+  # Find the conversion between pixel distance and actual distance** 
+  find_prelim_cores(refs) 
 
   # Add colormesh (radar reflectivity) 
   ax.pcolormesh(x, y, new_refs, cmap = ref_cmap, norm = ref_norm, zorder = 2) 
 
-  plt.show()
+  # plt.show()
 
 if __name__ == '__main__':
   main() 
