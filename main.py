@@ -95,7 +95,7 @@ def main():
   y_ncfr = y[m, n]
  
   # Find the conversion between pixel distance and actual distance** 
-  find_prelim_cores(refs) 
+  test_label = find_convective_cells(refs) 
 
   # Add colormesh (radar reflectivity) 
   ax.pcolormesh(x, y, new_refs, cmap = ref_cmap, norm = ref_norm, zorder = 2) 
