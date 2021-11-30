@@ -96,6 +96,7 @@ def main():
  
   # Find the conversion between pixel distance and actual distance** 
   test_label = find_convective_cells(refs) 
+  remove_wide_cells(refs, test_label) 
 
   # Add colormesh (radar reflectivity) 
   ax.pcolormesh(x, y, new_refs, cmap = ref_cmap, norm = ref_norm, zorder = 2) 
