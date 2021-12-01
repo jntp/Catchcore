@@ -11,7 +11,7 @@ def find_convective_cells(refs, min_ref = 45, min_size = 10):
   labeled_cells, num_feats_refs = label(refs, np.ones((3, 3), dtype = int))
 
   # Remove small objects  
-  labeled_cells = remove_small_objects(labeled_refs, min_size = min_size, connectivity = 2)
+  labeled_cells = remove_small_objects(labeled_cells, min_size = min_size, connectivity = 2)
 
   return labeled_cells 
   # Measure properties of the regions in the labeled image
@@ -21,29 +21,39 @@ def find_convective_cells(refs, min_ref = 45, min_size = 10):
   # labeled_image = np.zeros(labeled_refs.shape, dtype = int)
 
 def remove_wide_cells(refs, labeled_cells, max_width = 30): # still need to find conversion
-  # General thinking: subtract longest x from centroid x to get width
-  # Check if width > 5 km
-
   # Measure properties of the regions in the labeled image 
   regions = regionprops(labeled_cells, intensity_image = refs)
- 
-  # Test code of a particular region... delete later
-  test_coord = regions[1].coords
-  y_vals = np.unique(test_coord[:, 0]) 
-  widths = []
+
+  # Create new matrix of zeros, which will be a labeled image replacing labeled_cells
   labeled_cells2 = np.zeros(labeled_cells.shape, dtype = int)
 
-  for y in y_vals:
-    test_array = np.where(test_coord == y) 
-    test_indices = test_array[0]
-    new_coord = test_coord[test_indices]
-    x_vals = new_coord[:, 1]
-    width = max(x_vals) - min(x_vals)
-    widths.append(width)
- 
-  # if max(widths) < max_width:
-    # Basically update the actual refs where the labels meet
-    # labeled_cells2 += (labeled_cells == region.label) * refs
-  
+  # Find the maximum width of each region
   for region in regions:
-    # Rewrite test code here 
+    coords = region.coords 
+
+    # Extract unique y values (rows) of each region
+    y_vals = np.unique(coords[:, 0]) 
+
+    # Create empty list to store widths of each "line" in a region
+    widths = []
+
+    # Why isn't this working? Figure this out
+
+    # Find the width for each unique y value
+    for y in y_vals: 
+      # Extract x values that correspond to the y value
+      y_array = np.where(coords == y)  
+      y_indices = y_array[0] 
+      y_coords = coords[y_indices]
+      x_vals = y_coords[:, 1] # corresponds to cols   
+
+      # Subtract different highest and lowest x value to find width
+      width = max(x_vals) - min(x_vals)  
+      widths.append(width) 
+
+    # Check to see if region widths exceeds threshold
+    if max(widths) < max_width:
+      # Update the labeled cells if width is less than the threshold
+      labeled_cells2 += (labeled_cells == region.label) * refs 
+      
+  print(labeled_cells2[903][258]) 
