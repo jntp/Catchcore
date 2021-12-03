@@ -14,11 +14,6 @@ def find_convective_cells(refs, min_ref = 45, min_size = 10):
   labeled_cells = remove_small_objects(labeled_cells, min_size = min_size, connectivity = 2)
 
   return labeled_cells 
-  # Measure properties of the regions in the labeled image
-  # regions = regionprops(labeled_refs, intensity_image = refs)
-  
-  # Initialize another labeled image array
-  # labeled_image = np.zeros(labeled_refs.shape, dtype = int)
 
 def remove_wide_cells(refs, labeled_cells, max_width = 30): # still need to find conversion
   # Measure properties of the regions in the labeled image 
@@ -37,8 +32,6 @@ def remove_wide_cells(refs, labeled_cells, max_width = 30): # still need to find
     # Create empty list to store widths of each "line" in a region
     widths = []
 
-    # Why isn't this working? Figure this out
-
     # Find the width for each unique y value
     for y in y_vals: 
       # Extract x values that correspond to the y value
@@ -50,10 +43,10 @@ def remove_wide_cells(refs, labeled_cells, max_width = 30): # still need to find
       # Subtract different highest and lowest x value to find width
       width = max(x_vals) - min(x_vals)  
       widths.append(width) 
-
+  
     # Check to see if region widths exceeds threshold
     if max(widths) < max_width:
       # Update the labeled cells if width is less than the threshold
-      labeled_cells2 += (labeled_cells == region.label) * refs 
-      
-  print(labeled_cells2[903][258]) 
+      labeled_cells2 += (labeled_cells == region.label) * refs
+
+  return labeled_cells2 

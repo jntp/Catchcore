@@ -94,7 +94,10 @@ def main():
   x_ncfr = x[m, n] 
   y_ncfr = y[m, n]
  
-  # Find the conversion between pixel distance and actual distance** 
+  # Find the conversion between pixel distance and actual distance**
+  # Take (highest pixel - lowest pixel) / actual width
+  # Trick is to find the actual width?
+  # What's the GPS coordinates? 
   test_label = find_convective_cells(refs) 
   remove_wide_cells(refs, test_label) 
 
