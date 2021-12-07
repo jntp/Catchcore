@@ -8,6 +8,10 @@ import numpy as np
 import metpy.plots as mpplots 
 from shapely.geometry import Polygon
 from libs.segmentation import * 
+from geopy.distance import geodesic 
+
+# Convert pixel distance to actual distance
+# Look up geopy calculate distance
 
 # Create a base map to display Watershed and 
 def new_map(fig, lon, lat):
@@ -36,7 +40,12 @@ def main():
   # Get data from netcdf file
   lons = nexdata['Longitude'][:][:]
   lats = nexdata['Latitude'][:][:]
-  refs = nexdata['Reflectivity'][20]
+  refs = nexdata['Reflectivity'][20] 
+  ref_rows, ref_cols = refs.shape  
+
+  # Find pixel dimensions
+  pixel_length, pixel_width = get_pixel_dimensions(np.max(lats), np.max(lons), np.min(lats), \
+          np.min(lons), ref_rows, ref_cols)
 
   # Specify a central longitude and latitude (i.e. reference point)
   central_lon = -117.636
@@ -92,14 +101,11 @@ def main():
 
   # Obtain the x and y coordinates from the NCFR indices
   x_ncfr = x[m, n] 
-  y_ncfr = y[m, n]
- 
-  # Find the conversion between pixel distance and actual distance**
-  # Take (highest pixel - lowest pixel) / actual width
-  # Trick is to find the actual width?
-  # What's the GPS coordinates? 
-  test_label = find_convective_cells(refs) 
-  remove_wide_cells(refs, test_label) 
+  y_ncfr = y[m, n] 
+
+  # Segmentation 
+  conv_cells = find_convective_cells(refs) 
+  narrow_conv_cells = remove_wide_cells(refs, conv_cells)
 
   # Add colormesh (radar reflectivity) 
   ax.pcolormesh(x, y, new_refs, cmap = ref_cmap, norm = ref_norm, zorder = 2) 
