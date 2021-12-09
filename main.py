@@ -45,7 +45,7 @@ def main():
 
   # Find pixel dimensions
   pixel_length, pixel_width = get_pixel_dimensions(np.max(lats), np.max(lons), np.min(lats), \
-          np.min(lons), ref_rows, ref_cols)
+          np.min(lons), ref_rows, ref_cols) 
 
   # Specify a central longitude and latitude (i.e. reference point)
   central_lon = -117.636
@@ -104,8 +104,9 @@ def main():
   y_ncfr = y[m, n] 
 
   # Segmentation 
-  conv_cells = find_convective_cells(refs) 
-  narrow_conv_cells = remove_wide_cells(refs, conv_cells)
+  # conv_cells = find_convective_cells(refs) 
+  # narrow_conv_cells = remove_wide_cells(refs, conv_cells)
+  # connect_cores(refs, 15) # wrong
 
   # Add colormesh (radar reflectivity) 
   ax.pcolormesh(x, y, new_refs, cmap = ref_cmap, norm = ref_norm, zorder = 2) 

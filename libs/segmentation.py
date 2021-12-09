@@ -1,8 +1,9 @@
 import math
 import numpy as np
 from geopy.distance import geodesic 
+from scipy.ndimage import binary_closing, binary_dilation
 from scipy.ndimage.measurements import label
-from skimage.morphology import remove_small_objects 
+from skimage.morphology import disk, remove_small_objects 
 from skimage.measure import regionprops
 
 def get_pixel_dimensions(max_lat, max_lon, min_lat, min_lon, ref_rows, ref_cols):
@@ -30,17 +31,17 @@ def get_pixel_dimensions(max_lat, max_lon, min_lat, min_lon, ref_rows, ref_cols)
   return pixel_length, pixel_width 
 
 def find_convective_cells(refs, min_ref = 45, min_size = 10):
-  intense_refs = refs[refs >= min_ref]
+  conv_refs = refs[refs >= min_ref]
 
   # Label features in the intense_refs array where intense pixels touch
-  labeled_cells, num_feats_refs = label(refs, np.ones((3, 3), dtype = int))
+  labeled_cells, num_feats_refs = label(conv_refs, np.ones((3, 3), dtype = int))
 
   # Remove small objects  
   labeled_cells = remove_small_objects(labeled_cells, min_size = min_size, connectivity = 2)
 
   return labeled_cells 
 
-def remove_wide_cells(refs, labeled_cells, max_width = 20): # 20 pixels is ~5.25 km
+def remove_wide_cells(refs, labeled_cells, max_width = 20): # 20 pixels is ~5.5 km
   # Measure properties of the regions in the labeled image 
   regions = regionprops(labeled_cells, intensity_image = refs)
 
@@ -75,6 +76,13 @@ def remove_wide_cells(refs, labeled_cells, max_width = 20): # 20 pixels is ~5.25
       labeled_cells2 += (labeled_cells == region.label) * refs
 
   return labeled_cells2 
+
+def connect_cores(refs, labeled_image, gap_buffer, min_length = 40): # 40 pixels is ~10 km 
+  # Based on find_lines in Haberlie and Ashley (2018)
+  thresholded_image = 1 * binary_closing(labeled_image > 0, structure = disk(3), iterations = int(gap_buffer)) 
+  # review what binary_closing function does and output***
+
+  
 
 # Next step Connect Gaps with Cores
 # Will need to read literature on the general length of gaps
