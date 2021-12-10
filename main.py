@@ -104,17 +104,22 @@ def main():
   y_ncfr = y[m, n] 
 
   # Segmentation 
-  # conv_cells = find_convective_cells(refs) 
-  # narrow_conv_cells = remove_wide_cells(refs, conv_cells)
-  # connect_cores(refs, 15) # wrong
+  gap_buffer = 120 # test, 120 pixels is ~30 km 
+
+  conv_cells = find_convective_cells(refs) 
+  narrow_conv_cells = remove_wide_cells(refs, conv_cells)
+  connect_cores(refs, narrow_conv_cells, gap_buffer) 
+
+  # Plot the NCFR "slices" 
 
   # Add colormesh (radar reflectivity) 
-  ax.pcolormesh(x, y, new_refs, cmap = ref_cmap, norm = ref_norm, zorder = 2) 
+  # ax.pcolormesh(x, y, new_refs, cmap = ref_cmap, norm = ref_norm, zorder = 2) 
 
   # plt.show()
 
 if __name__ == '__main__':
   main() 
 
-# Next step identify NCFR and the intersection
+# First check if connect_cores has any errors
+# Next step plot the NCFR slices to test if code/algorithm even works 
 # Clean code later

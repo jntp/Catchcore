@@ -77,10 +77,26 @@ def remove_wide_cells(refs, labeled_cells, max_width = 20): # 20 pixels is ~5.5 
 
   return labeled_cells2 
 
+# Connect cores if wtihin certain distance (gaps), checks to see if the axis falls within NCFR criteria
 def connect_cores(refs, labeled_image, gap_buffer, min_length = 40): # 40 pixels is ~10 km 
   # Based on find_lines in Haberlie and Ashley (2018)
   thresholded_image = 1 * binary_closing(labeled_image > 0, structure = disk(3), iterations = int(gap_buffer)) 
-  # review what binary_closing function does and output***
+  
+  labeled_ncfr, num_feats_refs = label(thresholded_image, np.ones((3, 3)))
+
+  regions = regionprops(labeled_ncfr, intensity_image = refs)
+
+  for region in regions:
+    # Check if axis length of each feature is lower than minimum length
+    if region.major_axis_length < min_length:
+      # Set all pixels within the feature equal to zero
+      ymin, xmin = np.min(region.coords[:, 0], np.min(region.coords[:, -1]))
+      y, x = np.where(region.intensity_image > 0)
+      labeled_ncfr[ymin + y, xmin + x] = 0
+
+  return labeled_ncfr
+
+
 
   
 
