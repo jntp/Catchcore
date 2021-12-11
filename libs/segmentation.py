@@ -30,18 +30,18 @@ def get_pixel_dimensions(max_lat, max_lon, min_lat, min_lon, ref_rows, ref_cols)
 
   return pixel_length, pixel_width 
 
-def find_convective_cells(refs, min_ref = 45, min_size = 10):
-  conv_refs = refs[refs >= min_ref]
+def find_convective_cells(refs, min_ref = 45, min_size = 100):
+  conv_refs = np.uint8(refs >= 45)  
 
   # Label features in the intense_refs array where intense pixels touch
-  labeled_cells, num_feats_refs = label(conv_refs, np.ones((3, 3), dtype = int))
+  labeled_cells, num_feats_refs = label(conv_refs, np.ones((3, 3), dtype = int)) 
 
   # Remove small objects  
   labeled_cells = remove_small_objects(labeled_cells, min_size = min_size, connectivity = 2)
 
   return labeled_cells 
 
-def remove_wide_cells(refs, labeled_cells, max_width = 20): # 20 pixels is ~5.5 km
+def remove_wide_cells(refs, labeled_cells, max_width = 50): # 20 pixels is ~5.5 km
   # Measure properties of the regions in the labeled image 
   regions = regionprops(labeled_cells, intensity_image = refs)
 
@@ -75,12 +75,17 @@ def remove_wide_cells(refs, labeled_cells, max_width = 20): # 20 pixels is ~5.5 
       # Update the labeled cells if width is less than the threshold
       labeled_cells2 += (labeled_cells == region.label) * refs
 
-  return labeled_cells2 
+  return labeled_cells
+
+# maybe not needed
+def remove_short_cells(refs, labeled_cells, max_length = 80):
+  # Measure properties of the regions in the labeled image
+  regions = regionprops(labeled_cells, intensity_image = refs)
 
 # Connect cores if wtihin certain distance (gaps), checks to see if the axis falls within NCFR criteria
-def connect_cores(refs, labeled_image, gap_buffer, min_length = 40): # 40 pixels is ~10 km 
+def connect_cores(refs, labeled_image, gap_buffer, min_length = 100): # 80 pixels is ~20 km 
   # Based on find_lines in Haberlie and Ashley (2018)
-  thresholded_image = 1 * binary_closing(labeled_image > 0, structure = disk(3), iterations = int(gap_buffer)) 
+  thresholded_image = 1 * binary_closing(labeled_image > 0, structure = disk(3), iterations = gap_buffer) 
   
   labeled_ncfr, num_feats_refs = label(thresholded_image, np.ones((3, 3)))
 
@@ -94,7 +99,7 @@ def connect_cores(refs, labeled_image, gap_buffer, min_length = 40): # 40 pixels
       y, x = np.where(region.intensity_image > 0)
       labeled_ncfr[ymin + y, xmin + x] = 0
 
-  return labeled_ncfr
+  return thresholded_image
 
 
 

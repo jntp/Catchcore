@@ -104,22 +104,24 @@ def main():
   y_ncfr = y[m, n] 
 
   # Segmentation 
-  gap_buffer = 120 # test, 120 pixels is ~30 km 
+  gap_buffer = 100
 
   conv_cells = find_convective_cells(refs) 
-  narrow_conv_cells = remove_wide_cells(refs, conv_cells)
-  connect_cores(refs, narrow_conv_cells, gap_buffer) 
+  # you will probably need to do binary closing first!
+  narrow_conv_cells = remove_wide_cells(refs, conv_cells) # something wrong with this? fix this
+  labeled_ncfr = connect_cores(refs, narrow_conv_cells, gap_buffer) # something wrong with this, fix plz 
 
-  # Plot the NCFR "slices" 
+  # Plot the NCFR "slices"
+  ax.contour(x, y, 1 * (narrow_conv_cells > 0), colors = ['k',], linewidths = .5, linestyles = 'solid', \
+      zorder = 5)
 
   # Add colormesh (radar reflectivity) 
-  # ax.pcolormesh(x, y, new_refs, cmap = ref_cmap, norm = ref_norm, zorder = 2) 
+  ax.pcolormesh(x, y, new_refs, cmap = ref_cmap, norm = ref_norm, zorder = 2) 
 
-  # plt.show()
+  plt.show()
 
 if __name__ == '__main__':
   main() 
 
-# First check if connect_cores has any errors
-# Next step plot the NCFR slices to test if code/algorithm even works 
+# Get the algorithm to work now LOL  
 # Clean code later
