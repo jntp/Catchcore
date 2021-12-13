@@ -41,19 +41,21 @@ def find_convective_cells(refs, min_ref = 45, min_size = 100):
 
   return labeled_cells 
 
-def remove_wide_cells(refs, labeled_cells, max_width = 50): # 20 pixels is ~5.5 km
-  # Measure properties of the regions in the labeled image 
-  regions = regionprops(labeled_cells, intensity_image = refs)
+def close_holes(labeled_cells, conv_buffer):
+  return binary_closing(labeled_cells > 0, structure = np.ones((3, 3)), iterations = conv_buffer)
 
-  # Create new matrix of zeros, which will be a labeled image replacing labeled_cells
-  labeled_cells2 = np.zeros(labeled_cells.shape, dtype = int)
+def remove_wide_cells(refs, labeled_cells, max_width = 65): # 20 pixels is ~5.5 km
+  labeled_image, num_feats = label(1 * (labeled_cells > 0), np.ones((3, 3))) 
+  
+  # Measure properties of the regions in the labeled image 
+  regions = regionprops(labeled_image, intensity_image = refs)
 
   # Find the maximum width of each region
   for region in regions:
     coords = region.coords 
 
     # Extract unique y values (rows) of each region
-    y_vals = np.unique(coords[:, 0]) 
+    y_vals = np.unique(coords[:, 0])  
 
     # Create empty list to store widths of each "line" in a region
     widths = []
@@ -71,19 +73,24 @@ def remove_wide_cells(refs, labeled_cells, max_width = 50): # 20 pixels is ~5.5 
       widths.append(width) 
   
     # Check to see if region widths exceeds threshold
-    if max(widths) < max_width: 
-      # Update the labeled cells if width is less than the threshold
-      labeled_cells2 += (labeled_cells == region.label) * refs
+    if max(widths) > max_width: 
+      # Set the region of the labeled image equal to zero if max width exceeds threshold
+      ymin, xmin = np.min(region.coords[:, 0]), np.min(region.coords[:, 1])
+      y, x = np.where(region.intensity_image > 0)
+      labeled_image[ymin + y, xmin + x] = 0
 
-  return labeled_cells
+  return labeled_image
 
-# maybe not needed
-def remove_short_cells(refs, labeled_cells, max_length = 80):
-  # Measure properties of the regions in the labeled image
-  regions = regionprops(labeled_cells, intensity_image = refs)
+# Merges cells within a specified search radius
+def connect_cells(labeled_image, core_buffer):
+  return binary_closing(labeled_image > 0, structure = disk(3), iterations = core_buffer)
+
+# Removes cells directly adjacent to NCFR core?
+# Another idea, add to above function to check if closing signficantly increases width, delete if that's the case
+# Or consider using a different shape for structure, instead of disk(3) 
 
 # Connect cores if wtihin certain distance (gaps), checks to see if the axis falls within NCFR criteria
-def connect_cores(refs, labeled_image, gap_buffer, min_length = 100): # 80 pixels is ~20 km 
+def check_axis(refs, labeled_image, gap_buffer, min_length = 100): # 80 pixels is ~20 km 
   # Based on find_lines in Haberlie and Ashley (2018)
   thresholded_image = 1 * binary_closing(labeled_image > 0, structure = disk(3), iterations = gap_buffer) 
   

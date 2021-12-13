@@ -104,12 +104,15 @@ def main():
   y_ncfr = y[m, n] 
 
   # Segmentation 
-  gap_buffer = 100
+  core_buffer = 30
+  conv_buffer = 3
 
   conv_cells = find_convective_cells(refs) 
   # you will probably need to do binary closing first!
-  narrow_conv_cells = remove_wide_cells(refs, conv_cells) # something wrong with this? fix this
-  labeled_ncfr = connect_cores(refs, narrow_conv_cells, gap_buffer) # something wrong with this, fix plz 
+  closed_cells = close_holes(conv_cells, conv_buffer)
+  narrow_conv_cells = remove_wide_cells(refs, closed_cells) 
+  merged_cells = connect_cells(narrow_conv_cells, core_buffer) # hold off on this, write "adjacency function"
+  # labeled_ncfr = check_axis(refs, narrow_conv_cells, core_buffer) # something wrong with this, fix plz 
 
   # Plot the NCFR "slices"
   ax.contour(x, y, 1 * (narrow_conv_cells > 0), colors = ['k',], linewidths = .5, linestyles = 'solid', \
