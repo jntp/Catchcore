@@ -110,7 +110,8 @@ def main():
   conv_cells = find_convective_cells(refs) 
   # you will probably need to do binary closing first!
   closed_cells = close_holes(conv_cells, conv_buffer)
-  narrow_conv_cells = remove_wide_cells(refs, closed_cells) 
+  narrow_conv_cells = remove_wide_cells(refs, closed_cells)
+  remove_adjacent_cells(refs, narrow_conv_cells)
   merged_cells = connect_cells(narrow_conv_cells, core_buffer) # hold off on this, write "adjacency function"
   # labeled_ncfr = check_axis(refs, narrow_conv_cells, core_buffer) # something wrong with this, fix plz 
 

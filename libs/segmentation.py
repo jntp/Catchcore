@@ -3,7 +3,7 @@ import numpy as np
 from geopy.distance import geodesic 
 from scipy.ndimage import binary_closing, binary_dilation
 from scipy.ndimage.measurements import label
-from skimage.morphology import disk, remove_small_objects 
+from skimage.morphology import disk, remove_small_objects
 from skimage.measure import regionprops
 
 def get_pixel_dimensions(max_lat, max_lon, min_lat, min_lon, ref_rows, ref_cols):
@@ -80,6 +80,32 @@ def remove_wide_cells(refs, labeled_cells, max_width = 65): # 20 pixels is ~5.5 
       labeled_image[ymin + y, xmin + x] = 0
 
   return labeled_image
+
+def remove_adjacent_cells(refs, labeled_cells, max_dist = 50, min_slope = 0.5):
+  labeled_image, num_feats = label(1 * (labeled_cells > 0), np.ones((3, 3))) 
+  regions = regionprops(labeled_image, refs)
+
+  # Intialize list to store centroids
+  centroids = [] 
+
+  for region in regions:
+    centroids.append(region.centroid)
+ 
+    for i, centroid in enumerate(centroids):
+      # Don't calculate distance on first iteration, otherwise will prompt error
+      if i == 0:
+        continue
+
+      # Check the distance of current centroid and all centroids
+      if math.dist(region.centroid, centroids[i]) != 0 and math.dist(region.centroid, centroids[i]) <= max_dist:
+        # Check if slope falls within acceptable threshold
+        y1, x1 = region.centroid
+        y2, x2 = centroids[i]
+        print(x1, y1)
+
+        # If slope is too horizontal, check if centroid shares near vertical slope with other centroids
+
+
 
 # Merges cells within a specified search radius
 def connect_cells(labeled_image, core_buffer):
