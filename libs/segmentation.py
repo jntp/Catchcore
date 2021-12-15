@@ -81,15 +81,20 @@ def remove_wide_cells(refs, labeled_cells, max_width = 65): # 20 pixels is ~5.5 
 
   return labeled_image
 
-def remove_adjacent_cells(refs, labeled_cells, max_dist = 50, min_slope = 0.5):
+def remove_adjacent_cells(refs, labeled_cells, max_dist = 100, min_slope = 1, y_thresh = 150):
   labeled_image, num_feats = label(1 * (labeled_cells > 0), np.ones((3, 3))) 
   regions = regionprops(labeled_image, refs)
 
   # Intialize list to store centroids
   centroids = [] 
+  y_centroids = []
+  x_centroids = []
+  check_regions = [] # centroids of which to check "alignment" (along x axis) of other points
 
   for region in regions:
     centroids.append(region.centroid)
+    y_centroids.append(region.centroid[0])
+    x_centroids.append(region.centroid[1])
  
     for i, centroid in enumerate(centroids):
       # Don't calculate distance on first iteration, otherwise will prompt error
@@ -98,45 +103,61 @@ def remove_adjacent_cells(refs, labeled_cells, max_dist = 50, min_slope = 0.5):
 
       # Check the distance of current centroid and all centroids
       if math.dist(region.centroid, centroids[i]) != 0 and math.dist(region.centroid, centroids[i]) <= max_dist:
-        # Check if slope falls within acceptable threshold
+        # Check if slope magnitude falls within acceptable threshold
         y1, x1 = region.centroid
         y2, x2 = centroids[i]
-        print(x1, y1)
+        slope = (y2 - y1) / (x2 - x1) # calculate slope
 
-        # If slope is too horizontal, check if centroid shares near vertical slope with other centroids
+        if abs(slope) < min_slope:
+          check_regions.append(region)
 
+  # Convert to numpy array; used for array operations 
+  y_centroids = np.array(y_centroids)
 
+  # Check regions that meet the above criteria and see if they are aligned with other cells on y-axis
+  for region in check_regions:
+    lower_bound = region.centroid[1] - 50
+    upper_bound = region.centroid[1] + 50
+  
+    aligned_points = np.where((x_centroids >= lower_bound) & (x_centroids <= upper_bound))[0]
+    aligned_pts = np.array(aligned_points) 
+    
+    y_dist = abs(region.centroid[0] - y_centroids[aligned_pts]) 
+    y_dist = y_dist[y_dist != 0] # Delete any zeros in array, which likely references same point 
 
+    if len(aligned_pts > 1) and any(y_dist < y_thresh):
+      continue
+    else:
+      # Set the region of the labeled image equal to zero if max width exceeds threshold
+      ymin, xmin = np.min(region.coords[:, 0]), np.min(region.coords[:, 1])
+      y, x = np.where(region.intensity_image > 0)
+      labeled_image[ymin + y, xmin + x] = 0
+
+  return labeled_image
+      
 # Merges cells within a specified search radius
 def connect_cells(labeled_image, core_buffer):
   return binary_closing(labeled_image > 0, structure = disk(3), iterations = core_buffer)
 
-# Removes cells directly adjacent to NCFR core?
-# Another idea, add to above function to check if closing signficantly increases width, delete if that's the case
-# Or consider using a different shape for structure, instead of disk(3) 
-
 # Connect cores if wtihin certain distance (gaps), checks to see if the axis falls within NCFR criteria
-def check_axis(refs, labeled_image, gap_buffer, min_length = 100): # 80 pixels is ~20 km 
+def check_axis(refs, labeled_cells, min_length = 250): # 80 pixels is ~20 km 
   # Based on find_lines in Haberlie and Ashley (2018)
-  thresholded_image = 1 * binary_closing(labeled_image > 0, structure = disk(3), iterations = gap_buffer) 
-  
-  labeled_ncfr, num_feats_refs = label(thresholded_image, np.ones((3, 3)))
-
+  labeled_ncfr, num_feats = label(1 * (labeled_cells > 0), np.ones((3, 3)))
   regions = regionprops(labeled_ncfr, intensity_image = refs)
 
   for region in regions:
     # Check if axis length of each feature is lower than minimum length
     if region.major_axis_length < min_length:
       # Set all pixels within the feature equal to zero
-      ymin, xmin = np.min(region.coords[:, 0], np.min(region.coords[:, -1]))
+      ymin, xmin = np.min(region.coords[:, 0]), np.min(region.coords[:, 1])
       y, x = np.where(region.intensity_image > 0)
       labeled_ncfr[ymin + y, xmin + x] = 0
 
-  return thresholded_image
+  return labeled_ncfr
 
 
 
   
 
-# Next step Connect Gaps with Cores
-# Will need to read literature on the general length of gaps
+# Next step write extract_cores function
+# Clean code and annotate properly (write function for the deletion of regions) 

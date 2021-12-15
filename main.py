@@ -105,18 +105,17 @@ def main():
 
   # Segmentation 
   core_buffer = 30
-  conv_buffer = 3
+  conv_buffer = 3 # size of "holes" to fill in convective cells and clusters 
 
   conv_cells = find_convective_cells(refs) 
-  # you will probably need to do binary closing first!
   closed_cells = close_holes(conv_cells, conv_buffer)
   narrow_conv_cells = remove_wide_cells(refs, closed_cells)
-  remove_adjacent_cells(refs, narrow_conv_cells)
-  merged_cells = connect_cells(narrow_conv_cells, core_buffer) # hold off on this, write "adjacency function"
-  # labeled_ncfr = check_axis(refs, narrow_conv_cells, core_buffer) # something wrong with this, fix plz 
+  narrow_conv_cells2 = remove_adjacent_cells(refs, narrow_conv_cells)
+  merged_cells = connect_cells(narrow_conv_cells2, core_buffer) 
+  labeled_ncfr = check_axis(refs, merged_cells) # something wrong with this, fix plz 
 
   # Plot the NCFR "slices"
-  ax.contour(x, y, 1 * (narrow_conv_cells > 0), colors = ['k',], linewidths = .5, linestyles = 'solid', \
+  ax.contour(x, y, 1 * (labeled_ncfr > 0), colors = ['k',], linewidths = .5, linestyles = 'solid', \
       zorder = 5)
 
   # Add colormesh (radar reflectivity) 
