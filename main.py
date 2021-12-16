@@ -88,34 +88,23 @@ def main():
 
   # Add watershed geometry 
   ax.add_geometries(watershed.geometry, crs = ccrs.PlateCarree(), zorder = 1, facecolor = 'red', edgecolor = 'red')
-
-  # Identify NCFR; use reflectivity >= 45 dbz as the ncfr threshold
-  ncfr = np.empty((1336, 1506))
-  ncfr[:] = np.nan 
-  ncfr_indices = np.where(new_refs >= 45)
-  m = ncfr_indices[0] # size 83887
-  n = ncfr_indices[1] # size 83887
-  ncfr_refs = new_refs[new_refs >= 45]
-  ncfr_full_indices = m * 1506 + n
-  np.put(ncfr, ncfr_full_indices, ncfr_refs)
-
-  # Obtain the x and y coordinates from the NCFR indices
-  x_ncfr = x[m, n] 
-  y_ncfr = y[m, n] 
-
-  # Segmentation 
+ 
+  ## Segmentation 
+  # Initialization
   core_buffer = 30
   conv_buffer = 3 # size of "holes" to fill in convective cells and clusters 
 
+  # Segmentation Steps
   conv_cells = find_convective_cells(refs) 
   closed_cells = close_holes(conv_cells, conv_buffer)
   narrow_conv_cells = remove_wide_cells(refs, closed_cells)
   narrow_conv_cells2 = remove_adjacent_cells(refs, narrow_conv_cells)
   merged_cells = connect_cells(narrow_conv_cells2, core_buffer) 
-  labeled_ncfr = check_axis(refs, merged_cells) # something wrong with this, fix plz 
+  labeled_ncfr = check_axis(refs, merged_cells)  
+  labeled_cores = extract_cores(refs, labeled_ncfr, conv_buffer) 
 
   # Plot the NCFR "slices"
-  ax.contour(x, y, 1 * (labeled_ncfr > 0), colors = ['k',], linewidths = .5, linestyles = 'solid', \
+  ax.contour(x, y, 1 * (labeled_cores > 0), colors = ['k',], linewidths = .5, linestyles = 'solid', \
       zorder = 5)
 
   # Add colormesh (radar reflectivity) 

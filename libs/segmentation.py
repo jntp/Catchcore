@@ -155,9 +155,12 @@ def check_axis(refs, labeled_cells, min_length = 250): # 80 pixels is ~20 km
 
   return labeled_ncfr
 
+def extract_cores(refs, labeled_ncfr, conv_buffer):
+  y, x = np.where(refs < 45)
+  labeled_ncfr[y, x] = 0
+  labeled_cores = close_holes(labeled_ncfr, conv_buffer) # remove small holes from labeled regions
+
+  return labeled_cores 
 
 
-  
-
-# Next step write extract_cores function
 # Clean code and annotate properly (write function for the deletion of regions) 
