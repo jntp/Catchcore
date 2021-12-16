@@ -6,14 +6,9 @@ import cartopy.feature as cfeature
 from netCDF4 import Dataset
 import numpy as np
 import metpy.plots as mpplots 
-from shapely.geometry import Polygon
 from libs.segmentation import * 
-from geopy.distance import geodesic 
 
-# Convert pixel distance to actual distance
-# Look up geopy calculate distance
-
-# Create a base map to display Watershed and 
+# Create a base map to display Watershed and radar imagery
 def new_map(fig, lon, lat):
   # Create projection centered on the radar. Allows us to use x and y relative to the radar
   proj = ccrs.LambertConformal(central_longitude = lon, central_latitude = lat)
@@ -71,8 +66,10 @@ def main():
   x = out_xyz[:, :, 0] 
   y = out_xyz[:, :, 1]
 
+  ## Create new reflectivity matrix that only displays dbZ > 5 and creates transparent background
+  # Create empty matrix, same size as ref
   new_refs = np.empty((1336, 1506)) 
-  new_refs[:] = np.nan
+  new_refs[:] = np.nan # Set all equal to nan initially, creates "transparent" background 
 
   # Find a numpy function that gives you the VALUES based off of specified indices
   indices = np.where(refs >= 5)
@@ -87,14 +84,21 @@ def main():
   np.put(new_refs, full_indices, results)
 
   # Add watershed geometry 
-  ax.add_geometries(watershed.geometry, crs = ccrs.PlateCarree(), zorder = 1, facecolor = 'red', edgecolor = 'red')
+  # ax.add_geometries(watershed.geometry, crs = ccrs.PlateCarree(), zorder = 1, facecolor = 'red', edgecolor = 'red')
  
   ## Segmentation 
   # Initialization
-  core_buffer = 30
+  core_buffer = 30 # size of search radius to connect cellse
   conv_buffer = 3 # size of "holes" to fill in convective cells and clusters 
 
   # Segmentation Steps
+  # Step 1 - Extract convective cells
+  # Step 2 - Close holes in convective cells
+  # Step 3 - Remove wide cells
+  # Step 4 - Remove cells horizontally adjacent from suspected NCFR core 
+  # Step 5 - Connect cells within a certain search radius
+  # Step 6 - Check if the length of connected cells fail to meet NCFR criteria, remove
+  # Step 7 - Extract NCFR cores from labeled NCFR given convective criteria
   conv_cells = find_convective_cells(refs) 
   closed_cells = close_holes(conv_cells, conv_buffer)
   narrow_conv_cells = remove_wide_cells(refs, closed_cells)
@@ -114,6 +118,3 @@ def main():
 
 if __name__ == '__main__':
   main() 
-
-# Get the algorithm to work now LOL  
-# Clean code later
