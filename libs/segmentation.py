@@ -107,6 +107,10 @@ def close_holes(labeled_cells, conv_buffer):
 
   return binary_closing(labeled_cells > 0, structure = np.ones((3, 3)), iterations = conv_buffer)
 
+# def split_cells(labeled_cells):
+# See skimage segmentation mitosis
+# See skimage segmentation watershed
+
 def remove_wide_cells(refs, labeled_cells, max_width = 65): 
   """
   Removes convective cells wider than a specified width.
@@ -155,7 +159,7 @@ def remove_wide_cells(refs, labeled_cells, max_width = 65):
      
   return labeled_image
 
-def remove_adjacent_cells(refs, labeled_cells, max_dist = 100, min_slope = 1, y_thresh = 150):
+def remove_adjacent_cells(refs, labeled_cells, min_size = 200, max_dist = 100, min_slope = 1, y_thresh = 25):
   """
   Removes cells that are adjacent (on x axis) to the "suspected" NCFR core. First checks if the centroids of 
   the cells fall within a certain distance. Then checks the slope to determine if the centroids of the cells 
@@ -176,6 +180,9 @@ def remove_adjacent_cells(refs, labeled_cells, max_dist = 100, min_slope = 1, y_
   # Create labeled image and regions
   labeled_image, num_feats = label(1 * (labeled_cells > 0), np.ones((3, 3))) 
   regions = regionprops(labeled_image, refs)
+
+  # Remove small objects
+  labeled_image = remove_small_objects(labeled_image, min_size = min_size, connectivity = 2)
 
   # Intialize list to store centroids and centroid information
   centroids = [] 
@@ -228,7 +235,7 @@ def remove_adjacent_cells(refs, labeled_cells, max_dist = 100, min_slope = 1, y_
       continue
     else:
       # Set the region of the labeled image equal to zero if max width exceeds threshold
-      labeled_image = remove_region(region, labeled_image) 
+      labeled_image = remove_region(region, labeled_image)
 
   return labeled_image
       

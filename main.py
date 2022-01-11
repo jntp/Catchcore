@@ -22,6 +22,8 @@ def new_map(fig, lon, lat):
 
   return ax
 
+# def segmentation(refs, core_buffer = 30, conv_buffer = 3):  
+
 ## ** Main Function where everything happens **
 def main():
   # Load watershed
@@ -35,7 +37,7 @@ def main():
   # Get data from netcdf file
   lons = nexdata['Longitude'][:][:]
   lats = nexdata['Latitude'][:][:]
-  refs = nexdata['Reflectivity'][20] 
+  refs = nexdata['Reflectivity'][18] # reference reflectivity
   ref_rows, ref_cols = refs.shape  
 
   # Find pixel dimensions
@@ -86,10 +88,12 @@ def main():
   # Add watershed geometry 
   # ax.add_geometries(watershed.geometry, crs = ccrs.PlateCarree(), zorder = 1, facecolor = 'red', edgecolor = 'red')
  
+  # Start animation here... 
+
   ## Segmentation 
   # Initialization
-  core_buffer = 30 # size of search radius to connect cellse
-  conv_buffer = 3 # size of "holes" to fill in convective cells and clusters 
+  core_buffer = 20 # size of search radius to connect cells
+  conv_buffer = 3 # size of "holes" to fill in convective cells and clusters
 
   # Segmentation Steps
   # Step 1 - Extract convective cells
@@ -105,10 +109,10 @@ def main():
   narrow_conv_cells2 = remove_adjacent_cells(refs, narrow_conv_cells)
   merged_cells = connect_cells(narrow_conv_cells2, core_buffer) 
   labeled_ncfr = check_axis(refs, merged_cells)  
-  labeled_cores = extract_cores(refs, labeled_ncfr, conv_buffer) 
+  # labeled_cores = extract_cores(refs, labeled_ncfr, conv_buffer) 
 
   # Plot the NCFR "slices"
-  ax.contour(x, y, 1 * (labeled_cores > 0), colors = ['k',], linewidths = .5, linestyles = 'solid', \
+  ax.contour(x, y, 1 * (closed_cells > 0), colors = ['k',], linewidths = .5, linestyles = 'solid', \
       zorder = 5)
 
   # Add colormesh (radar reflectivity) 
@@ -117,4 +121,6 @@ def main():
   plt.show()
 
 if __name__ == '__main__':
-  main() 
+  main()
+
+# You left off at debugging the code... check remove_adjacent_cells 
