@@ -4,7 +4,7 @@ from geopy.distance import geodesic
 from scipy.ndimage import binary_closing
 from scipy.ndimage.measurements import label
 from skimage.morphology import disk, remove_small_objects
-from skimage.measure import regionprops
+from skimage.measure import regionprops 
 
 ## "Auxilliary functions" used to shorten code
 
@@ -107,18 +107,15 @@ def close_holes(labeled_cells, conv_buffer):
 
   return binary_closing(labeled_cells > 0, structure = np.ones((3, 3)), iterations = conv_buffer)
 
-# def split_cells(labeled_cells):
-# See skimage segmentation mitosis
-# See skimage segmentation watershed
-
-def remove_wide_cells(refs, labeled_cells, max_width = 65): 
+def remove_wide_cells(refs, labeled_cells, mode = 0, max_width = 65): 
   """
   Removes convective cells wider than a specified width.
 
   Parameters:
   refs - radar image (reflectivity)
   labeled_cells - labeled image of convective cells
-  max_width = maximum width allowed for a convective cell (default: 65 pixels)
+  mode - 0 looks at greatest width of cell; 1 looks at width of centroid (default: 0)
+  max_width - maximum width allowed for a convective cell (default: 65 pixels) 
 
   Returns:
   labeled_image - updated labeled image of convective cells with wide cells removed
@@ -133,29 +130,41 @@ def remove_wide_cells(refs, labeled_cells, max_width = 65):
   # Find the maximum width of each region
   for region in regions:
     coords = region.coords 
+    y_centroid = int(region.centroid[0]) # new code 
 
     # Extract unique y values (rows) of each region
     y_vals = np.unique(coords[:, 0])  
 
-    # Create empty list to store widths of each "line" in a region
-    widths = []
+    if mode == 0:
+      # Create empty list to store widths of each "line" in a region
+      widths = []
 
-    # Find the width for each unique y value
-    for y in y_vals: 
-      # Extract x values that correspond to the y value
-      y_array = np.where(coords == y)  
-      y_indices = y_array[0] 
-      y_coords = coords[y_indices]
-      x_vals = y_coords[:, 1] # corresponds to cols   
+      # Find the width for each unique y value
+      for y in y_vals: 
+        # Extract x values that correspond to the y value
+        y_array = np.where(coords == y)  
+        y_indices = y_array[0] 
+        y_coords = coords[y_indices] 
+        x_vals = y_coords[:, 1] # corresponds to cols   
 
-      # Subtract different highest and lowest x value to find width
-      width = max(x_vals) - min(x_vals)  
-      widths.append(width) 
-  
-    # Check to see if region widths exceeds threshold
-    if max(widths) > max_width: 
-      # Set the region of the labeled image equal to zero if max width exceeds threshold
-      labeled_image = remove_region(region, labeled_image) 
+        # Subtract different highest and lowest x value to find width
+        width = max(x_vals) - min(x_vals)  
+        widths.append(width) 
+
+      # Check to see if region widths exceeds threshold
+      if max(widths) > max_width: 
+        # Set the region of the labeled image equal to zero if max width exceeds threshold
+        labeled_image = remove_region(region, labeled_image)
+    elif mode == 1:
+      # New Code!!!
+      test_indices = np.where(coords == y_centroid)[0]
+      test_coords = coords[test_indices]
+      test_vals = test_coords[:, 1] 
+    
+      test_width = max(test_vals) - min(test_vals)
+    
+      if test_width > max_width:
+        labeled_image = remove_region(region, labeled_image)  
      
   return labeled_image
 
@@ -281,7 +290,7 @@ def check_axis(refs, labeled_cells, min_length = 250):
 
   return labeled_ncfr
 
-def extract_cores(refs, labeled_ncfr, conv_buffer, min_ref = 45):
+def extract_cores(refs, labeled_ncfr, conv_buffer, min_ref = 45, min_size = 800):
   """
   Extracts the cores from a labeled NCFR image.
 
@@ -298,5 +307,16 @@ def extract_cores(refs, labeled_ncfr, conv_buffer, min_ref = 45):
   y, x = np.where(refs < min_ref)
   labeled_ncfr[y, x] = 0
   labeled_cores = close_holes(labeled_ncfr, conv_buffer) # remove small holes from labeled regions
+
+  # Remove small objects  
+  labeled_cores = remove_small_objects(labeled_cores, min_size = min_size, connectivity = 2)
+  # PERHAPS MOVE THIS TO REMOVE_ADJACENT_CELLS!!!
+
+  # Remove small holes
+  labeled_cores = close_holes(labeled_cores, 8) 
+
+  # Remove large objects
+  # The thinking is remove large objects... then create a Step 8 which produces labeled NCFR
+  labeled_cores = remove_wide_cells(refs, labeled_cores, 1)
 
   return labeled_cores 

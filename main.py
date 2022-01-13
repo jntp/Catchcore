@@ -22,7 +22,6 @@ def new_map(fig, lon, lat):
 
   return ax
 
-# def segmentation(refs, core_buffer = 30, conv_buffer = 3):  
 
 ## ** Main Function where everything happens **
 def main():
@@ -37,7 +36,7 @@ def main():
   # Get data from netcdf file
   lons = nexdata['Longitude'][:][:]
   lats = nexdata['Latitude'][:][:]
-  refs = nexdata['Reflectivity'][18] # reference reflectivity
+  refs = nexdata['Reflectivity'][24] # reference reflectivity
   ref_rows, ref_cols = refs.shape  
 
   # Find pixel dimensions
@@ -92,7 +91,7 @@ def main():
 
   ## Segmentation 
   # Initialization
-  core_buffer = 20 # size of search radius to connect cells
+  core_buffer = 30 # size of search radius to connect cells, 30 is final number... 
   conv_buffer = 3 # size of "holes" to fill in convective cells and clusters
 
   # Segmentation Steps
@@ -108,11 +107,12 @@ def main():
   narrow_conv_cells = remove_wide_cells(refs, closed_cells)
   narrow_conv_cells2 = remove_adjacent_cells(refs, narrow_conv_cells)
   merged_cells = connect_cells(narrow_conv_cells2, core_buffer) 
-  labeled_ncfr = check_axis(refs, merged_cells)  
-  # labeled_cores = extract_cores(refs, labeled_ncfr, conv_buffer) 
+  labeled_ncfr0 = check_axis(refs, merged_cells)  
+  # labeled_cores = extract_cores(refs, labeled_ncfr0, conv_buffer)
+  # Step 8 here
 
   # Plot the NCFR "slices"
-  ax.contour(x, y, 1 * (closed_cells > 0), colors = ['k',], linewidths = .5, linestyles = 'solid', \
+  ax.contour(x, y, 1 * (narrow_conv_cells2 > 0), colors = ['k',], linewidths = .5, linestyles = 'solid', \
       zorder = 5)
 
   # Add colormesh (radar reflectivity) 
@@ -123,4 +123,5 @@ def main():
 if __name__ == '__main__':
   main()
 
-# You left off at debugging the code... check remove_adjacent_cells 
+# You left off at debugging the code...
+# Fix/optimize [24] 
