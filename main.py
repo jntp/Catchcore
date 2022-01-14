@@ -36,7 +36,7 @@ def main():
   # Get data from netcdf file
   lons = nexdata['Longitude'][:][:]
   lats = nexdata['Latitude'][:][:]
-  refs = nexdata['Reflectivity'][24] # reference reflectivity
+  refs = nexdata['Reflectivity'][23] # reference reflectivity
   ref_rows, ref_cols = refs.shape  
 
   # Find pixel dimensions
@@ -108,11 +108,11 @@ def main():
   narrow_conv_cells2 = remove_adjacent_cells(refs, narrow_conv_cells)
   merged_cells = connect_cells(narrow_conv_cells2, core_buffer) 
   labeled_ncfr0 = check_axis(refs, merged_cells)  
-  # labeled_cores = extract_cores(refs, labeled_ncfr0, conv_buffer)
+  labeled_cores = extract_cores(refs, labeled_ncfr0, conv_buffer)
   # Step 8 here
 
   # Plot the NCFR "slices"
-  ax.contour(x, y, 1 * (narrow_conv_cells2 > 0), colors = ['k',], linewidths = .5, linestyles = 'solid', \
+  ax.contour(x, y, 1 * (labeled_cores > 0), colors = ['k',], linewidths = .5, linestyles = 'solid', \
       zorder = 5)
 
   # Add colormesh (radar reflectivity) 
@@ -124,4 +124,5 @@ if __name__ == '__main__':
   main()
 
 # You left off at debugging the code...
-# Fix/optimize [24] 
+# See Test in segmentation.py... was experimenting with larger thresholds for max_dist
+# Fix/optimize [23] 

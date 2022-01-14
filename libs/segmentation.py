@@ -107,7 +107,7 @@ def close_holes(labeled_cells, conv_buffer):
 
   return binary_closing(labeled_cells > 0, structure = np.ones((3, 3)), iterations = conv_buffer)
 
-def remove_wide_cells(refs, labeled_cells, mode = 0, max_width = 65): 
+def remove_wide_cells(refs, labeled_cells, mode = 0, max_width = 80): 
   """
   Removes convective cells wider than a specified width.
 
@@ -168,7 +168,7 @@ def remove_wide_cells(refs, labeled_cells, mode = 0, max_width = 65):
      
   return labeled_image
 
-def remove_adjacent_cells(refs, labeled_cells, min_size = 200, max_dist = 100, min_slope = 1, y_thresh = 25):
+def remove_adjacent_cells(refs, labeled_cells, min_size = 200, max_dist = 200, min_slope = 1, y_thresh = 25):
   """
   Removes cells that are adjacent (on x axis) to the "suspected" NCFR core. First checks if the centroids of 
   the cells fall within a certain distance. Then checks the slope to determine if the centroids of the cells 
@@ -209,7 +209,7 @@ def remove_adjacent_cells(refs, labeled_cells, min_size = 200, max_dist = 100, m
       # Don't calculate distance on first iteration, otherwise will prompt error
       if i == 0:
         continue
-
+ 
       # Check the distance of current centroid and all centroids
       if math.dist(region.centroid, centroids[i]) != 0 and math.dist(region.centroid, centroids[i]) <= max_dist:
         # Check if slope magnitude falls within acceptable threshold
@@ -218,6 +218,7 @@ def remove_adjacent_cells(refs, labeled_cells, min_size = 200, max_dist = 100, m
         slope = (y2 - y1) / (x2 - x1) # calculate slope
 
         # If the slope magnitude lies below minimum value (suggesting adjacency), flag region for further investigation
+        print(slope)       
         if abs(slope) < min_slope:
           check_regions.append(region)
 
@@ -245,6 +246,12 @@ def remove_adjacent_cells(refs, labeled_cells, min_size = 200, max_dist = 100, m
     else:
       # Set the region of the labeled image equal to zero if max width exceeds threshold
       labeled_image = remove_region(region, labeled_image)
+
+  # Remove small objects  
+  labeled_image = remove_small_objects(labeled_image, min_size = min_size * 4, connectivity = 2)
+
+  # Test
+  labeled_image = check_axis(refs, labeled_image)
 
   return labeled_image
       
@@ -309,14 +316,14 @@ def extract_cores(refs, labeled_ncfr, conv_buffer, min_ref = 45, min_size = 800)
   labeled_cores = close_holes(labeled_ncfr, conv_buffer) # remove small holes from labeled regions
 
   # Remove small objects  
-  labeled_cores = remove_small_objects(labeled_cores, min_size = min_size, connectivity = 2)
+  # labeled_cores = remove_small_objects(labeled_cores, min_size = min_size, connectivity = 2)
   # PERHAPS MOVE THIS TO REMOVE_ADJACENT_CELLS!!!
 
   # Remove small holes
-  labeled_cores = close_holes(labeled_cores, 8) 
+  labeled_cores = close_holes(labeled_cores, 3) 
 
   # Remove large objects
   # The thinking is remove large objects... then create a Step 8 which produces labeled NCFR
-  labeled_cores = remove_wide_cells(refs, labeled_cores, 1)
+  # labeled_cores = remove_wide_cells(refs, labeled_cores, 1)
 
   return labeled_cores 
