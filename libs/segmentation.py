@@ -107,15 +107,14 @@ def close_holes(labeled_cells, conv_buffer):
 
   return binary_closing(labeled_cells > 0, structure = np.ones((3, 3)), iterations = conv_buffer)
 
-def remove_wide_cells(refs, labeled_cells, mode = 0, max_width = 80): 
+def remove_wide_cells(refs, labeled_cells, max_width = 80): 
   """
   Removes convective cells wider than a specified width.
 
   Parameters:
   refs - radar image (reflectivity)
   labeled_cells - labeled image of convective cells
-  mode - 0 looks at greatest width of cell; 1 looks at width of centroid (default: 0)
-  max_width - maximum width allowed for a convective cell (default: 65 pixels) 
+  max_width - maximum width allowed for a convective cell (default: 80 pixels) 
 
   Returns:
   labeled_image - updated labeled image of convective cells with wide cells removed
@@ -135,40 +134,29 @@ def remove_wide_cells(refs, labeled_cells, mode = 0, max_width = 80):
     # Extract unique y values (rows) of each region
     y_vals = np.unique(coords[:, 0])  
 
-    if mode == 0:
-      # Create empty list to store widths of each "line" in a region
-      widths = []
+    # Create empty list to store widths of each "line" in a region
+    widths = []
 
-      # Find the width for each unique y value
-      for y in y_vals: 
-        # Extract x values that correspond to the y value
-        y_array = np.where(coords == y)  
-        y_indices = y_array[0] 
-        y_coords = coords[y_indices] 
-        x_vals = y_coords[:, 1] # corresponds to cols   
+    # Find the width for each unique y value
+    for y in y_vals: 
+      # Extract x values that correspond to the y value
+      y_array = np.where(coords == y)  
+      y_indices = y_array[0] 
+      y_coords = coords[y_indices] 
+      x_vals = y_coords[:, 1] # corresponds to cols   
 
-        # Subtract different highest and lowest x value to find width
-        width = max(x_vals) - min(x_vals)  
-        widths.append(width) 
+      # Subtract different highest and lowest x value to find width
+      width = max(x_vals) - min(x_vals)  
+      widths.append(width) 
 
-      # Check to see if region widths exceeds threshold
-      if max(widths) > max_width: 
-        # Set the region of the labeled image equal to zero if max width exceeds threshold
-        labeled_image = remove_region(region, labeled_image)
-    elif mode == 1:
-      # New Code!!!
-      test_indices = np.where(coords == y_centroid)[0]
-      test_coords = coords[test_indices]
-      test_vals = test_coords[:, 1] 
-    
-      test_width = max(test_vals) - min(test_vals)
-    
-      if test_width > max_width:
-        labeled_image = remove_region(region, labeled_image)  
+    # Check to see if region widths exceeds threshold
+    if max(widths) > max_width: 
+      # Set the region of the labeled image equal to zero if max width exceeds threshold
+      labeled_image = remove_region(region, labeled_image)
      
   return labeled_image
 
-def remove_adjacent_cells(refs, labeled_cells, min_size = 200, max_dist = 200, min_slope = 1, y_thresh = 25):
+def remove_adjacent_cells(refs, labeled_cells, min_size = 200, max_dist = 100, min_slope = 1, y_thresh = 25):
   """
   Removes cells that are adjacent (on x axis) to the "suspected" NCFR core. First checks if the centroids of 
   the cells fall within a certain distance. Then checks the slope to determine if the centroids of the cells 
@@ -178,9 +166,10 @@ def remove_adjacent_cells(refs, labeled_cells, min_size = 200, max_dist = 200, m
   Parameters:
   refs - radar image (reflectivity)
   labeled_cells - labeled image of convective cells
+  min_size - minimum size of cell to be considered part of an NCFR (default: 200px) 
   max_dist - maximum distance between centroids for cells to be considered "adjacent" to each other (default: 100px)
   min_slope - minimum slope for cells to be considered NOT "adjacent" to each other along the x-axis (default: 1)
-  y_thresh - maximum distance along y-axis for cells to be considered associated with each other (default: 150px)
+  y_thresh - maximum distance along y-axis for cells to be considered associated with each other (default: 25px)
 
   Returns:
   labeled_image - updated labeled image with adjacent cell removed
@@ -217,8 +206,7 @@ def remove_adjacent_cells(refs, labeled_cells, min_size = 200, max_dist = 200, m
         y2, x2 = centroids[i]
         slope = (y2 - y1) / (x2 - x1) # calculate slope
 
-        # If the slope magnitude lies below minimum value (suggesting adjacency), flag region for further investigation
-        print(slope)       
+        # If the slope magnitude lies below minimum value (suggesting adjacency), flag region for further investigation       
         if abs(slope) < min_slope:
           check_regions.append(region)
 
@@ -249,9 +237,6 @@ def remove_adjacent_cells(refs, labeled_cells, min_size = 200, max_dist = 200, m
 
   # Remove small objects  
   labeled_image = remove_small_objects(labeled_image, min_size = min_size * 4, connectivity = 2)
-
-  # Test
-  labeled_image = check_axis(refs, labeled_image)
 
   return labeled_image
       
@@ -297,7 +282,7 @@ def check_axis(refs, labeled_cells, min_length = 250):
 
   return labeled_ncfr
 
-def extract_cores(refs, labeled_ncfr, conv_buffer, min_ref = 45, min_size = 800):
+def extract_cores(refs, labeled_ncfr, conv_buffer, min_ref = 45):
   """
   Extracts the cores from a labeled NCFR image.
 
@@ -305,6 +290,7 @@ def extract_cores(refs, labeled_ncfr, conv_buffer, min_ref = 45, min_size = 800)
   refs - radar image (reflectivity)
   labeled_ncfr - labeled image of an NCFR
   conv_buffer - size of holes to close 
+  min_ref - minimum reflectivity to be considered an NCFR core (default: 45 dbZ) 
 
   Returns:
   labeled_cores - updated labeled image of the NCFR cores
@@ -315,15 +301,7 @@ def extract_cores(refs, labeled_ncfr, conv_buffer, min_ref = 45, min_size = 800)
   labeled_ncfr[y, x] = 0
   labeled_cores = close_holes(labeled_ncfr, conv_buffer) # remove small holes from labeled regions
 
-  # Remove small objects  
-  # labeled_cores = remove_small_objects(labeled_cores, min_size = min_size, connectivity = 2)
-  # PERHAPS MOVE THIS TO REMOVE_ADJACENT_CELLS!!!
-
   # Remove small holes
   labeled_cores = close_holes(labeled_cores, 3) 
-
-  # Remove large objects
-  # The thinking is remove large objects... then create a Step 8 which produces labeled NCFR
-  # labeled_cores = remove_wide_cells(refs, labeled_cores, 1)
 
   return labeled_cores 
