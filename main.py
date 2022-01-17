@@ -1,5 +1,7 @@
 import geopandas as gpd
+import matplotlib
 import matplotlib.pyplot as plt
+from matplotlib.animation import ArtistAnimation 
 import cartopy
 import cartopy.crs as ccrs
 import cartopy.feature as cfeature 
@@ -67,10 +69,47 @@ def segmentation(refs, core_buffer = 30, conv_buffer = 3):
   return labeled_ncfr, labeled_cores 
 
 # Plots a single image
-# def plot_single(ax, x, y, new_refs, labeled_image)
+def plot_single(ax, x, y, ref_cmap, ref_norm, new_refs, labeled_image):
+  # Plot the NCFR "slices"
+  ax.contour(x, y, 1 * (labeled_image > 0), colors = ['k',], linewidths = .5, linestyles = 'solid', \
+      zorder = 5)
 
+  # Add colormesh (radar reflectivity) 
+  ax.pcolormesh(x, y, new_refs, cmap = ref_cmap, norm = ref_norm, zorder = 2)
+
+  plt.show() 
 
 # Plots animated image
+def plot_animated(fig, ax, x, y, ref_cmap, ref_norm, ref_refs):
+  # Create a list that will be run through when animating
+  meshes = []
+  
+  for refs in ref_refs:     
+    # Create transparent background for reflectivity
+    new_refs = new_reflectivity(refs)
+
+    # Delineate the NCFR and its cores
+    labeled_ncfr, labeled_cores = segmentation(refs)
+
+    # Plot the NCFR "slices"
+    contour = ax.contour(x, y, 1 * (labeled_cores > 0), colors = ['k',], linewidths = .5, linestyles = 'solid', \
+      zorder = 5)
+
+    # Add colormesh (radar reflectivity) 
+    mesh = ax.pcolormesh(x, y, new_refs, cmap = ref_cmap, norm = ref_norm, zorder = 2)
+
+    # Add text
+    # text = ax.text(0.7, 0.02, data.time_coverage_start, transform = ax.transAxes, fontdict = {'size': 16})
+
+    # Add to the list for animation
+    meshes.append((contour, mesh)) 
+
+  # Convert to HTML5 video using matplotlib
+  matplotlib.rcParams['animation.html'] = 'html5'
+
+  # Create an animation
+  ani = ArtistAnimation(fig, meshes)
+  ani.save("test.gif", writer = "imagemagick") # test 
 
 
 ## ** Main Function where everything happens **
@@ -86,7 +125,7 @@ def main():
   # Get data from netcdf file
   lons = nexdata['Longitude'][:][:]
   lats = nexdata['Latitude'][:][:]
-  ref_refs = nexdata['Reflectivity'][:] # reference reflectivity
+  ref_refs = nexdata['Reflectivity'][20:25] # reference reflectivity
   ref_rows, ref_cols = ref_refs[0].shape  
 
   # Find pixel dimensions
@@ -121,22 +160,11 @@ def main():
   # ax.add_geometries(watershed.geometry, crs = ccrs.PlateCarree(), zorder = 1, facecolor = 'red', edgecolor = 'red')
  
   # Start animation here... 
-  # Create a list that will be run through when animating
-  # meshes = []
-  # for refs in ref_refs: 
-    # labeled_ncfr, labeled_cores = segmentation(refs)
+  plot_animated(fig, ax, x, y, ref_cmap, ref_norm, ref_refs)
 
-  # Plot the NCFR "slices"
-  ax.contour(x, y, 1 * (labeled_cores > 0), colors = ['k',], linewidths = .5, linestyles = 'solid', \
-      zorder = 5)
-
-  # Add colormesh (radar reflectivity) 
-  ax.pcolormesh(x, y, new_refs, cmap = ref_cmap, norm = ref_norm, zorder = 2) 
-
-  plt.show()
 
 if __name__ == '__main__':
   main() 
 
 # You left off reorganizing the code
-# You left off writing plot_single and plot_animated functions
+# Fix moviewriter is unavailable error; use pillow instead
