@@ -1,7 +1,8 @@
 import geopandas as gpd
 import matplotlib
-import matplotlib.pyplot as plt
-from matplotlib.animation import ArtistAnimation 
+import matplotlib.pyplot as plt  
+from matplotlib.animation import ArtistAnimation, FuncAnimation
+from matplotlib.animation import PillowWriter
 import cartopy
 import cartopy.crs as ccrs
 import cartopy.feature as cfeature 
@@ -80,37 +81,46 @@ def plot_single(ax, x, y, ref_cmap, ref_norm, new_refs, labeled_image):
   plt.show() 
 
 # Plots animated image
-def plot_animated(fig, ax, x, y, ref_cmap, ref_norm, ref_refs):
+def plot_animated(fig, x, y, ref_cmap, ref_norm, ref_refs):
   # Create a list that will be run through when animating
   meshes = []
+    
+  ## TEST
+  ax = new_map(fig, -117.636, 33.818) # -117.636, 33.818 
+
+  # Set limits in lat/lon space
+  ax.set_extent([-121, -114, 32, 36]) # SoCal
   
   for refs in ref_refs:     
+    # ax.clear() 
     # Create transparent background for reflectivity
     new_refs = new_reflectivity(refs)
 
     # Delineate the NCFR and its cores
-    labeled_ncfr, labeled_cores = segmentation(refs)
-
+    labeled_ncfr, labeled_cores = segmentation(refs) 
+ 
     # Plot the NCFR "slices"
     contour = ax.contour(x, y, 1 * (labeled_cores > 0), colors = ['k',], linewidths = .5, linestyles = 'solid', \
-      zorder = 5)
+        zorder = 5) 
 
     # Add colormesh (radar reflectivity) 
-    mesh = ax.pcolormesh(x, y, new_refs, cmap = ref_cmap, norm = ref_norm, zorder = 2)
+    mesh = ax.pcolormesh(x, y, new_refs, cmap = ref_cmap, norm = ref_norm, zorder = 2) 
 
     # Add text
-    # text = ax.text(0.7, 0.02, data.time_coverage_start, transform = ax.transAxes, fontdict = {'size': 16})
+    text = ax.text(0.7, 0.02, "test", transform = ax.transAxes, fontdict = {'size': 16})
 
-    # Add to the list for animation
-    meshes.append((contour, mesh)) 
+    # Add to the list for animation 
+    meshes.append((mesh, text)) # must be like this
+
 
   # Convert to HTML5 video using matplotlib
-  matplotlib.rcParams['animation.html'] = 'html5'
+  # matplotlib.rcParams['animation.html'] = 'html5' 
 
   # Create an animation
   ani = ArtistAnimation(fig, meshes)
-  ani.save("test.gif", writer = "imagemagick") # test 
-
+  plt.close() 
+  # print(manimation.writers.list()) 
+  ani.save("test.gif", writer = PillowWriter(fps = 1)) # this yields error; fix
 
 ## ** Main Function where everything happens **
 def main():
@@ -158,13 +168,46 @@ def main():
  
   # Add watershed geometry 
   # ax.add_geometries(watershed.geometry, crs = ccrs.PlateCarree(), zorder = 1, facecolor = 'red', edgecolor = 'red')
- 
-  # Start animation here... 
-  plot_animated(fig, ax, x, y, ref_cmap, ref_norm, ref_refs)
 
+  ## Animate the Plot
+  def animate_contour(i):
+    ax.clear()  
+
+    new_refs = new_reflectivity(ref_refs[i])
+
+    labeled_ncfr, labeled_cores = segmentation(ref_refs[i])
+
+    # Create a new map
+    # ax = new_map(fig, central_lon, central_lat) # -117.636, 33.818 
+
+    # Set limits in lat/lon space
+    # ax.set_extent([-121, -114, 32, 36]) # SoCal
+
+    # Plot the NCFR "slices"
+    contour = ax.contour(x, y, 1 * (labeled_cores > 0), colors = ['k',], linewidths = .5, linestyles = 'solid', \
+        zorder = 5) 
+
+    # Add colormesh (radar reflectivity) 
+    mesh = ax.pcolormesh(x, y, new_refs, cmap = ref_cmap, norm = ref_norm, zorder = 2) 
+
+    # Add text
+    text = ax.text(0.7, 0.02, "test", transform = ax.transAxes, fontdict = {'size': 16})
+
+    # Add colormesh and text as artists
+    ax.add_artist(mesh)
+    ax.add_artist(text)
+
+    return contour
+
+  # Call animate function
+  ani = FuncAnimation(fig, animate_contour, interval = 100, frames = len(ref_refs))
+  ani.save("test2.gif", writer = PillowWriter(fps = 1))  
+
+
+  
 
 if __name__ == '__main__':
   main() 
 
 # You left off reorganizing the code
-# Fix moviewriter is unavailable error; use pillow instead
+# Animations works now, but how to include base map in animation?
