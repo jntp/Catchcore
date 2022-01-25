@@ -94,12 +94,12 @@ def main():
   # Get data from netcdf file
   lons = nexdata['Longitude'][:][:]
   lats = nexdata['Latitude'][:][:]
-  ref_refs = nexdata['Reflectivity'][20:25] # reference reflectivity
-  years = nexdata['Year'][20:25]
-  months = nexdata['Month'][20:25]
-  days = nexdata['Day'][20:25]
-  hours = nexdata['Hour'][20:25]
-  minutes = nexdata['Minute'][20:25] 
+  ref_refs = nexdata['Reflectivity'][:] # reference reflectivity
+  years = nexdata['Year'][:]
+  months = nexdata['Month'][:]
+  days = nexdata['Day'][:]
+  hours = nexdata['Hour'][:]
+  minutes = nexdata['Minute'][:] 
  
   # Find pixel dimensions
   ref_rows, ref_cols = ref_refs[0].shape 
@@ -132,9 +132,12 @@ def main():
  
   # Add watershed geometry 
   # ax.add_geometries(watershed.geometry, crs = ccrs.PlateCarree(), zorder = 1, facecolor = 'red', edgecolor = 'red') 
-
   ## Animate the Plot
   def animate_contour(i):
+    """
+      Animates the segmented NCFR radar plot. Called using Matplotlib's FuncAnimation.
+      Returns a contour plot with the mesh grid (radar reflectivity) and text attached as artists.
+    """
     # Clear axes to prevent contours from clobbering up
     ax.clear()  
 
@@ -191,10 +194,9 @@ def main():
 
   # Call animate function
   ani = FuncAnimation(fig, animate_contour, interval = 100, frames = len(ref_refs))
-  ani.save("test2.gif", writer = PillowWriter(fps = 1))  
+  ani.save("./plots/20170217_18.gif", writer = PillowWriter(fps = 1))  
 
 if __name__ == '__main__':
   main() 
 
-# You left off annotating/cleaning/reorganizing the code
 # Now onto loading watersheds, finding intersection, etc. 
