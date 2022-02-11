@@ -60,7 +60,8 @@ def extract_core_boundaries(refs, labeled_cores):
 
       # print(labeled_cores[i_0s, j_0s])
 
-      # Check if any of the elements in the array equal 0 or the empty space
+      # Check if any of the elements in the array equal 0 or the empty spacei
+      # Add to external boundary
 
   # -2147483648 is empty space 
   # Check if each coord stands on its own
