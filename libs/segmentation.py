@@ -1,5 +1,6 @@
 import math
 import numpy as np
+import cv2 as cv 
 from geopy.distance import geodesic 
 from scipy.ndimage import binary_closing
 from scipy.ndimage.measurements import label
@@ -73,7 +74,7 @@ def find_convective_cells(refs, min_ref = 45, min_size = 100):
   Extracts convective cells in a radar image based on a specified threshold 
 
   Parameters:
-  refs - radar image (reflectivity)
+ matplotlib finding intersection between geometries refs - radar image (reflectivity)
   min_ref - minimum convective reflectivity threshold (default: 45 dbZ)
   min_size - minimum size of a convective cell (default: 100 pixels)
 
