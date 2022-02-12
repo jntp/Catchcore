@@ -12,7 +12,6 @@ import metpy.plots as mpplots
 from shapely.geometry import Point 
 from libs.segmentation import *
 from libs.intersection import *
-import cv2 as cv 
 
 # Create a base map to display Watershed and radar imagery
 def new_map(fig, lon, lat):
@@ -73,10 +72,10 @@ def segmentation(refs, core_buffer = 30, conv_buffer = 3):
   return labeled_ncfr, labeled_cores 
 
 # Plots a single image
-def plot_single(ax, x, y, ref_cmap, ref_norm, new_refs, labeled_image):
+def plot_single(ax, x, y, ref_cmap, ref_norm, new_refs, exterior_coords, labeled_image=0):
   # Plot the NCFR "slices"
-  ax.contour(x, y, 1 * (labeled_image > 0), colors = ['k',], linewidths = .5, linestyles = 'solid', \
-      zorder = 5) 
+  # ax.contour(x, y, 1 * (labeled_image > 0), colors = ['k',], linewidths = .5, linestyles = 'solid', \
+  #    zorder = 5) 
  
   # Add colormesh (radar reflectivity) 
   ax.pcolormesh(x, y, new_refs, cmap = ref_cmap, norm = ref_norm, zorder = 2)
@@ -135,31 +134,22 @@ def main():
  
   # Add watershed geometry 
   ax.add_geometries(watershed.geometry, crs = ccrs.PlateCarree(), zorder = 1, facecolor = 'red', edgecolor = 'red') 
-  # test = watershed.geometry.boundary
-  # print(test) 
-  # for index, row in watershed.iterrows():
-    # print(row) 
-    # for pt in list(test):
-      # print(Point(pt))
 
-  # Parse the polygon from geodataframe
+  # Parse the linearring from geodataframe
   testing = watershed.iloc[1]
   testing2 = testing['geometry']
-  xpol, ypol = testing2.exterior.coords.xy
-  print(cfeature.Feature.geometries(testing2.exterior)) 
-  # print(x[1]) 
-  # Search "shapely polygon extract points individually"
-  # General bool matrix where lat/lon of watershed meet?
+  testing22 = testing2.exterior
+  print(testing22) 
+  print(testing22.bounds) 
+  xpol, ypol = testing2.exterior.coords.xy # these are both arrays; check if lons, lats are the same format 
+  
+  # Convert linearring to x, y coordinates (next step)
 
   # Test... finding the linewidth of the segmented contours
   ref_ref = ref_refs[20] 
   labeled_ncfr, labeled_cores = segmentation(ref_ref)
-  extract_core_boundaries(labeled_cores, ref_ref)
-  # retval, threshold = cv.threshold(...) # test look this up
-  # See: https://www.geeksforgeeks.org/find-co-ordinates-of-contours-using-opencv-python/
-
-  # contours, hierarchy = cv.findContours(labeled_cores, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_NONE)
-  # print(contours)
+  core_centroids = extract_core_centroids(labeled_cores, ref_ref)
+  # print(core_centroids) 
 
   # Note labeled cores are cartopy GeoContourSet objects... see if you can intersect those?
   # See if you can convert polygon into cartopy geocontourset or some shit
@@ -240,9 +230,9 @@ if __name__ == '__main__':
 # Search "matplotlib finding intersection between geometries" for more info 
 # How to extract individual coordinates from Polygon???
 
-# Search "shapely load geojson" to extract polygon points
-# Look at .loc and .iloc in geopandas documentation:
-# https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.loc.html#pandas.DataFrame.loc
-
 # look at shapely linearring
-# look into cartopy intersecting geometries
+# look into cartopy intersecting geometriesi
+
+# New idea!!!
+# Get centroid of each region (labeled core) and see if it falls within the linearring of watershed
+# Using geopandas sjoin (spatial join) 
