@@ -1,3 +1,4 @@
+import math 
 import geopandas as gpd
 import matplotlib
 import matplotlib.pyplot as plt  
@@ -12,6 +13,7 @@ import metpy.plots as mpplots
 from shapely.geometry import Point 
 from libs.segmentation import *
 from libs.intersection import *
+from skimage.measure import find_contours # temp
 
 # Create a base map to display Watershed and radar imagery
 def new_map(fig, lon, lat):
@@ -72,10 +74,10 @@ def segmentation(refs, core_buffer = 30, conv_buffer = 3):
   return labeled_ncfr, labeled_cores 
 
 # Plots a single image
-def plot_single(ax, x, y, ref_cmap, ref_norm, new_refs, exterior_coords, labeled_image=0):
+def plot_single(ax, x, y, ref_cmap, ref_norm, new_refs, labeled_image):
   # Plot the NCFR "slices"
-  # ax.contour(x, y, 1 * (labeled_image > 0), colors = ['k',], linewidths = .5, linestyles = 'solid', \
-  #    zorder = 5) 
+  ax.contour(x, y, 1 * (labeled_image > 0), colors = ['k',], linewidths = .5, linestyles = 'solid', \
+      zorder = 5) 
  
   # Add colormesh (radar reflectivity) 
   ax.pcolormesh(x, y, new_refs, cmap = ref_cmap, norm = ref_norm, zorder = 2)
@@ -131,16 +133,16 @@ def main():
   # Separate x, y from out_xyz
   x = out_xyz[:, :, 0] 
   y = out_xyz[:, :, 1]
- 
+
   # Add watershed geometry 
   ax.add_geometries(watershed.geometry, crs = ccrs.PlateCarree(), zorder = 1, facecolor = 'red', edgecolor = 'red') 
 
   # Parse the linearring from geodataframe
   testing = watershed.iloc[1]
   testing2 = testing['geometry']
-  testing22 = testing2.exterior
-  print(testing22) 
-  print(testing22.bounds) 
+  testing22 = testing2.exterior # use this as shapely geometry for intersection
+  # print(testing22) 
+  # print(testing22.bounds) 
   xpol, ypol = testing2.exterior.coords.xy # these are both arrays; check if lons, lats are the same format 
   
   # Convert linearring to x, y coordinates (next step)
@@ -149,10 +151,35 @@ def main():
   ref_ref = ref_refs[20] 
   labeled_ncfr, labeled_cores = segmentation(ref_ref)
   core_centroids = extract_core_centroids(labeled_cores, ref_ref)
-  # print(core_centroids) 
+  test_contours = find_contours(labeled_cores, 0)
+   
+  # It works!
+  # Now convert x, y to lat, lon
+  geom_proj = ccrs.PlateCarree() 
 
-  # Note labeled cores are cartopy GeoContourSet objects... see if you can intersect those?
-  # See if you can convert polygon into cartopy geocontourset or some shit
+  for contour in test_contours:
+    i = np.array(contour[:, 0], dtype = int)
+    j = np.array(contour[:, 1], dtype = int) # Left off here
+
+    x_contours = x[i, j]
+    y_contours = y[i, j]
+
+    # Convert from axes coordinates to display coordinates
+    x_displays = ax.transAxes.transform(x_contours)
+    y_displays = ax.transAxes.transform(y_contours) 
+
+    # Convert from display coordinates to data coordinates
+    x_datacoords = ax.transData.inverted().transform(x_displays)
+    y_datacoords = ax.transData.inverted().transform(y_displays)
+
+    # Convert from data to cartesian (lat, lon) coordinates
+    # contours_lon = geom_proj.transform_point(
+    # Google "cartopy transform points"
+
+    ax.plot(x_contours, y_contours, linewidth = 2) 
+
+  plt.show() 
+
   # new_refs = new_reflectivity(ref_ref)
   # plot_single(ax, x, y, ref_cmap, ref_norm, new_refs, labeled_cores)
 

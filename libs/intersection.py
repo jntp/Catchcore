@@ -6,6 +6,8 @@ def extract_core_centroids(refs, labeled_cores):
   centroids = []
 
   for region in regions:
-    centroids.append(region.centroid)
+    centroids.append(region.centroid) 
 
   return centroids
+
+# See "Approximate and subdivide polygons" and find_contours in sci-kit-image manual
