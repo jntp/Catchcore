@@ -128,11 +128,11 @@ def main():
   use_proj = ccrs.LambertConformal(central_longitude = central_lon, central_latitude = central_lat)
 
   # Transfer lats, lons matrices from geodetic lat/lon to LambertConformal
-  out_xyz = use_proj.transform_points(ccrs.Geodetic(), lons, lats)
-  
+  out_xyz = use_proj.transform_points(ccrs.Geodetic(), lons, lats) 
+
   # Separate x, y from out_xyz
   x = out_xyz[:, :, 0] 
-  y = out_xyz[:, :, 1]
+  y = out_xyz[:, :, 1] 
 
   # Add watershed geometry 
   ax.add_geometries(watershed.geometry, crs = ccrs.PlateCarree(), zorder = 1, facecolor = 'red', edgecolor = 'red') 
@@ -155,28 +155,22 @@ def main():
    
   # It works!
   # Now convert x, y to lat, lon
-  geom_proj = ccrs.PlateCarree() 
+  geom_proj = ccrs.PlateCarree()
 
   for contour in test_contours:
     i = np.array(contour[:, 0], dtype = int)
     j = np.array(contour[:, 1], dtype = int) # Left off here
 
-    x_contours = x[i, j]
-    y_contours = y[i, j]
+    x_contour = x[i, j]
+    y_contour = y[i, j]
+  
+    out_latlon = geom_proj.transform_points(use_proj, x_contour, y_contour) 
+  
+    contour_lon = out_latlon[:, 0]
+    contour_lat = out_latlon[:, 1] 
+    # Plot contour_lon and contour_lat to check for accuracy 
 
-    # Convert from axes coordinates to display coordinates
-    x_displays = ax.transAxes.transform(x_contours)
-    y_displays = ax.transAxes.transform(y_contours) 
-
-    # Convert from display coordinates to data coordinates
-    x_datacoords = ax.transData.inverted().transform(x_displays)
-    y_datacoords = ax.transData.inverted().transform(y_displays)
-
-    # Convert from data to cartesian (lat, lon) coordinates
-    # contours_lon = geom_proj.transform_point(
-    # Google "cartopy transform points"
-
-    ax.plot(x_contours, y_contours, linewidth = 2) 
+    ax.plot(x_contour, y_contour, linewidth = 2) 
 
   plt.show() 
 
