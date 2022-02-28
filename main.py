@@ -14,6 +14,7 @@ from shapely.geometry import Point
 from libs.segmentation import *
 from libs.intersection import *
 from skimage.measure import find_contours # temp
+from shapely.geometry.polygon import LinearRing
 
 # Create a base map to display Watershed and radar imagery
 def new_map(fig, lon, lat):
@@ -118,7 +119,7 @@ def main():
   fig = plt.figure(figsize = (10, 10))
   ax = new_map(fig, central_lon, central_lat) # -117.636, 33.818 
 
-  # Set limits in lat/lon space
+  # Set limits in lat/lon 
   ax.set_extent([-121, -114, 32, 36]) # SoCal
 
   # Get color table and value mapping info for the NWS Reflectivity data
@@ -133,7 +134,7 @@ def main():
   # Separate x, y from out_xyz
   x = out_xyz[:, :, 0] 
   y = out_xyz[:, :, 1] 
-
+ 
   # Add watershed geometry 
   ax.add_geometries(watershed.geometry, crs = ccrs.PlateCarree(), zorder = 1, facecolor = 'red', edgecolor = 'red') 
 
@@ -156,6 +157,7 @@ def main():
   # It works!
   # Now convert x, y to lat, lon
   geom_proj = ccrs.PlateCarree()
+  shapely_contours = [] 
 
   for contour in test_contours:
     i = np.array(contour[:, 0], dtype = int)
@@ -163,19 +165,36 @@ def main():
 
     x_contour = x[i, j]
     y_contour = y[i, j]
-  
+    # print(x_contour, y_contour) 
+
+    # Check if this conversion is even necessary 
     out_latlon = geom_proj.transform_points(use_proj, x_contour, y_contour) 
   
     contour_lon = out_latlon[:, 0]
     contour_lat = out_latlon[:, 1] 
-    # Plot contour_lon and contour_lat to check for accuracy 
+    contour_points = [] 
 
-    ax.plot(x_contour, y_contour, linewidth = 2) 
+    for i, lon in enumerate(contour_lon):
+      contour_points.append((contour_lon[i], contour_lat[i]))
+
+    shapely_contour = LinearRing(contour_points)
+    shapely_contours.append(shapely_contour)
+    # Plot contour_lon and contour_lat to check for accuracy
+    # ax.plot(contour_lon, contour_lat, linewidth = 2) 
+
+    # ax.plot(x_contour, y_contour, linewidth = 2)
+
+  # Plot the shapely contours????
+  ax.add_geometries(shapely_contours, crs = ccrs.PlateCarree(), zorder = 1, facecolor = 'green', edgecolor = 'green')
+
+  # Now do the intersection
 
   plt.show() 
 
   # new_refs = new_reflectivity(ref_ref)
-  # plot_single(ax, x, y, ref_cmap, ref_norm, new_refs, labeled_cores)
+ 
+
+ # plot_single(ax, x, y, ref_cmap, ref_norm, new_refs, labeled_cores)
 
   ## Animate the Plot
   def animate_contour(i):
