@@ -14,6 +14,8 @@ from shapely.geometry import Point
 from libs.segmentation import *
 from libs.intersection import *
 from skimage.measure import find_contours # temp
+from shapely.geometry import shape # temp
+from shapely.geometry import Polygon 
 from shapely.geometry.polygon import LinearRing
 
 # Create a base map to display Watershed and radar imagery
@@ -139,17 +141,17 @@ def main():
   ax.add_geometries(watershed.geometry, crs = ccrs.PlateCarree(), zorder = 1, facecolor = 'red', edgecolor = 'red') 
 
   # Parse the linearring from geodataframe
-  testing = watershed.iloc[1]
-  testing2 = testing['geometry']
-  testing22 = testing2.exterior # use this as shapely geometry for intersection
+  # testing = watershed.iloc[1]
+  # testing2 = testing['geometry']
+  # testing22 = testing2.exterior # use this as shapely geometry for intersection
   # print(testing22) 
   # print(testing22.bounds) 
-  xpol, ypol = testing2.exterior.coords.xy # these are both arrays; check if lons, lats are the same format 
+  # xpol, ypol = testing2.exterior.coords.xy # these are both arrays; check if lons, lats are the same format 
   
   # Convert linearring to x, y coordinates (next step)
 
   # Test... finding the linewidth of the segmented contours
-  ref_ref = ref_refs[20] 
+  ref_ref = ref_refs[33] 
   labeled_ncfr, labeled_cores = segmentation(ref_ref)
   core_centroids = extract_core_centroids(labeled_cores, ref_ref)
   test_contours = find_contours(labeled_cores, 0)
@@ -157,7 +159,8 @@ def main():
   # It works!
   # Now convert x, y to lat, lon
   geom_proj = ccrs.PlateCarree()
-  shapely_contours = [] 
+  shapely_contours = []
+  shapely_polygons = [] # test
 
   for contour in test_contours:
     i = np.array(contour[:, 0], dtype = int)
@@ -177,8 +180,14 @@ def main():
     for i, lon in enumerate(contour_lon):
       contour_points.append((contour_lon[i], contour_lat[i]))
 
+    # Make the shapely geometry of the labelled core
     shapely_contour = LinearRing(contour_points)
     shapely_contours.append(shapely_contour)
+    
+    # Test 
+    shapely_polygon = Polygon(contour_points)
+    shapely_polygons.append(shapely_polygon)
+
     # Plot contour_lon and contour_lat to check for accuracy
     # ax.plot(contour_lon, contour_lat, linewidth = 2) 
 
@@ -188,13 +197,38 @@ def main():
   ax.add_geometries(shapely_contours, crs = ccrs.PlateCarree(), zorder = 1, facecolor = 'green', edgecolor = 'green')
 
   # Now do the intersection
+  # Why isn't this working...
+  # Coordinates of linearring don't seem to agree???
 
+  # geom_contours = [shape(feat["geometry"]) for feat in shapely_contours]
+  # print(geom_contours) 
+
+  testing = watershed.iloc[1]
+  testing2 = testing['geometry']
+  # testing22 = testing2.exterior # use this as shapely geometry for intersection
+  print(testing2.exterior)
+  xpol, ypol = testing2.exterior.coords.xy
+
+  # Test
+  watershed_poly_coords = []
+  for i, x_val in enumerate(xpol):
+    watershed_poly_coords.append((xpol[i], ypol[i]))
+  watershed_poly = Polygon(watershed_poly_coords) # Note this produces repeating coordinates
+  # print(watershed_poly)
+
+  # Why isn't this working...
+  # Also look up "shapely area of intersection" 
+  for shapely_contour in shapely_contours:
+    test_intersection = shapely_contour.intersection(testing2.exterior)
+    print(test_intersection)
+
+  print(shapely_contours[23]) 
   plt.show() 
 
   # new_refs = new_reflectivity(ref_ref)
  
 
- # plot_single(ax, x, y, ref_cmap, ref_norm, new_refs, labeled_cores)
+  # plot_single(ax, x, y, ref_cmap, ref_norm, new_refs, labeled_cores)
 
   ## Animate the Plot
   def animate_contour(i):
