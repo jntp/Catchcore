@@ -158,7 +158,7 @@ def main():
    
   # It works!
   # Now convert x, y to lat, lon
-  geom_proj = ccrs.PlateCarree()
+  geom_proj = ccrs.Geodetic() # previously in PlateCarree
   shapely_contours = []
   shapely_polygons = [] # test
 
@@ -203,10 +203,10 @@ def main():
   # geom_contours = [shape(feat["geometry"]) for feat in shapely_contours]
   # print(geom_contours) 
 
-  testing = watershed.iloc[1]
+  testing = watershed.iloc[1] 
   testing2 = testing['geometry']
   # testing22 = testing2.exterior # use this as shapely geometry for intersection
-  print(testing2.exterior)
+  # print(testing2.exterior)
   xpol, ypol = testing2.exterior.coords.xy
 
   # Test
@@ -216,11 +216,22 @@ def main():
   watershed_poly = Polygon(watershed_poly_coords) # Note this produces repeating coordinates
   # print(watershed_poly)
 
+  # Create geoseries (test) 
+  watershed_geoms = []
+  for watershed_geom in watershed.geometry:
+    watershed_geoms.append(watershed_geom) 
+  watershed_gs = gpd.GeoSeries(watershed_geoms)
+
+  cores_gs = gpd.GeoSeries(shapely_contours)
+ 
   # Why isn't this working...
   # Also look up "shapely area of intersection" 
-  for shapely_contour in shapely_contours:
-    test_intersection = shapely_contour.intersection(testing2.exterior)
-    print(test_intersection)
+  # for shapely_polygon in shapely_polygons:
+    # test_intersection = shapely_polygon.intersection(watershed.geometry[1])
+    # print(test_intersection)
+
+  test_intersections = cores_gs.union(watershed_gs)
+  print(test_intersections) # It returned something??? Plot this
 
   print(shapely_contours[23]) 
   plt.show() 
