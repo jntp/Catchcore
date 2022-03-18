@@ -92,6 +92,10 @@ def plot_single(ax, x, y, ref_cmap, ref_norm, new_refs, labeled_image):
 def main():
   # Load watershed
   watershed = gpd.read_file("santa_ana_r_a.geojson")
+  print(watershed.crs)
+  # Left off at looking at projected vs. geographic coordinate system
+  # watershed = watershed.to_crs("+proj=lcc +lat_1=20 +lat_2=60 +lat_0=40 +lon_0=-96 +x_0=0 +y_0=0 +ellps=GRS80 +datum=NAD83 +units=m no_defs")
+  # print(watershed.crs) 
 
   # Load NEXRAD data from netcdf4 file
   ncfile = '/media/jntp/D2BC15A1BC1580E1/NCFRs/20170217_18.nc'
@@ -135,23 +139,22 @@ def main():
 
   # Separate x, y from out_xyz
   x = out_xyz[:, :, 0] 
-  y = out_xyz[:, :, 1] 
+  y = out_xyz[:, :, 1]
+
+  # Test - Extract points of watershed and convert to LambertConformal x, y coordinates
+  watershed_lon, watershed_lat = watershed.geometry[1].exterior.coords.xy
+ 
+  watershed_lon = np.array(watershed_lon) 
+  watershed_lat = np.array(watershed_lat)
+
+  water_xyz = use_proj.transform_points(ccrs.Geodetic(), watershed_lon, watershed_lat)
+  print(water_xyz) # you left off here... now make LinearRing of coords 
  
   # Add watershed geometry 
-  ax.add_geometries(watershed.geometry, crs = ccrs.PlateCarree(), zorder = 1, facecolor = 'red', edgecolor = 'red') 
-
-  # Parse the linearring from geodataframe
-  # testing = watershed.iloc[1]
-  # testing2 = testing['geometry']
-  # testing22 = testing2.exterior # use this as shapely geometry for intersection
-  # print(testing22) 
-  # print(testing22.bounds) 
-  # xpol, ypol = testing2.exterior.coords.xy # these are both arrays; check if lons, lats are the same format 
-  
-  # Convert linearring to x, y coordinates (next step)
+  # ax.add_geometries(watershed.geometry, crs = ccrs.LambertConformal(), zorder = 1, facecolor = 'red', edgecolor = 'red') 
 
   # Test... finding the linewidth of the segmented contours
-  ref_ref = ref_refs[33] 
+  ref_ref = ref_refs[34] 
   labeled_ncfr, labeled_cores = segmentation(ref_ref)
   core_centroids = extract_core_centroids(labeled_cores, ref_ref)
   test_contours = find_contours(labeled_cores, 0)
@@ -160,33 +163,36 @@ def main():
   # Now convert x, y to lat, lon
   geom_proj = ccrs.Geodetic() # previously in PlateCarree
   shapely_contours = []
-  shapely_polygons = [] # test
+  shapely_kontours = [] # test
 
   for contour in test_contours:
     i = np.array(contour[:, 0], dtype = int)
-    j = np.array(contour[:, 1], dtype = int) # Left off here
+    j = np.array(contour[:, 1], dtype = int) 
 
     x_contour = x[i, j]
     y_contour = y[i, j]
     # print(x_contour, y_contour) 
 
-    # Check if this conversion is even necessary 
+    # Check if this conversion is even necessary; not necessary! Use Lambert Conformal for both systems 
     out_latlon = geom_proj.transform_points(use_proj, x_contour, y_contour) 
   
     contour_lon = out_latlon[:, 0]
     contour_lat = out_latlon[:, 1] 
-    contour_points = [] 
+ 
+    contour_points = []
+    contour_xy = []
 
     for i, lon in enumerate(contour_lon):
       contour_points.append((contour_lon[i], contour_lat[i]))
+      contour_xy.append((x_contour[i], y_contour[i]))
 
     # Make the shapely geometry of the labelled core
     shapely_contour = LinearRing(contour_points)
     shapely_contours.append(shapely_contour)
     
     # Test 
-    shapely_polygon = Polygon(contour_points)
-    shapely_polygons.append(shapely_polygon)
+    shapely_kontour = LinearRing(contour_xy)
+    shapely_kontours.append(shapely_kontour)
 
     # Plot contour_lon and contour_lat to check for accuracy
     # ax.plot(contour_lon, contour_lat, linewidth = 2) 
@@ -194,7 +200,7 @@ def main():
     # ax.plot(x_contour, y_contour, linewidth = 2)
 
   # Plot the shapely contours????
-  ax.add_geometries(shapely_contours, crs = ccrs.PlateCarree(), zorder = 1, facecolor = 'green', edgecolor = 'green')
+  ax.add_geometries(shapely_kontours, crs = use_proj, zorder = 1, facecolor = 'green', edgecolor = 'green')
 
   # Now do the intersection
   # Why isn't this working...
@@ -223,17 +229,20 @@ def main():
   watershed_gs = gpd.GeoSeries(watershed_geoms)
 
   cores_gs = gpd.GeoSeries(shapely_contours)
+  # print(cores_gs)
+  # cores_gs = cores_gs.set_crs(3740)
+  # cores_gs = cores_gs.to_crs(3740) 
  
   # Why isn't this working...
   # Also look up "shapely area of intersection" 
-  # for shapely_polygon in shapely_polygons:
-    # test_intersection = shapely_polygon.intersection(watershed.geometry[1])
-    # print(test_intersection)
+  for core in cores_gs:
+    test_intersection = watershed.contains(core) # left off here
+    print(test_intersection)
 
-  test_intersections = cores_gs.union(watershed_gs)
-  print(test_intersections) # It returned something??? Plot this
+  # test_intersections = cores_gs.intersection(watershed.geometry[1])
+  # print(test_intersections) # It returned something??? Plot this
 
-  print(shapely_contours[23]) 
+  # print(shapely_contours[23]) 
   plt.show() 
 
   # new_refs = new_reflectivity(ref_ref)
