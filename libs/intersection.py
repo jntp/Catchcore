@@ -1,17 +1,39 @@
 import numpy as np
-from skimage.measure import regionprops
+import geopandas as gpd
+from skimage.measure import find_contours
+from shapely.geometry import Polygon 
 
-def extract_core_centroids(refs, labeled_cores):
-  regions = regionprops(labeled_cores, intensity_image = refs)
-  centroids = []
+def get_core_contours(labeled_cores, lons, lats):
+  # Find contours from labeled_cores
+  contours = find_contours(labeled_cores, 0)
 
-  for region in regions:
-    centroids.append(region.centroid) 
+  # Create array to store contours of cores
+  shapely_contours = []
 
-  return centroids
+  for contour in contours:
+    # Extract indices of each contour; make accessible by converting to numpy array
+    i = np.array(contour[:, 0], dtype = int)
+    j = np.array(contour[:, 1], dtype = int)
 
-def extract_watershed_boundary(geometry):
-  for testline in geometry:
-    print(testline)
+    # Extract latitude and longitude coordinates corresponding NEXRAD crs
+    lons_contour = lons[i, j]
+    lats_contour = lats[i, j]
 
-# See "Approximate and subdivide polygons" and find_contours in sci-kit-image manual
+    # Arrange coordinates as tuple and store in array
+    contour_points = []
+    
+    for k, lon in enumerate(lons_contour):
+      contour_points.append((lons_contour[k], lats_contour[k]))
+
+    # Make the shapely polygon from contour points
+    shapely_contour = Polygon(contour_points) 
+
+    # Store geometry in array
+    shapely_contours.append(shapely_contour)
+
+  return shapely_contours
+
+def find_intersection:
+  # Create Geoseries from polygon cores; will be needed for intersection 
+  print("Test") 
+
