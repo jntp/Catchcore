@@ -10,4 +10,8 @@ def extract_core_centroids(refs, labeled_cores):
 
   return centroids
 
+def extract_watershed_boundary(geometry):
+  for testline in geometry:
+    print(testline)
+
 # See "Approximate and subdivide polygons" and find_contours in sci-kit-image manual
