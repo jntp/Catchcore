@@ -1,7 +1,8 @@
 import numpy as np
 import geopandas as gpd
 from skimage.measure import find_contours
-from shapely.geometry import Polygon 
+from shapely.geometry import Polygon
+from shapely.ops import polygonize_full 
 
 def get_core_contours(labeled_cores, lons, lats):
   # Find contours from labeled_cores
@@ -33,7 +34,19 @@ def get_core_contours(labeled_cores, lons, lats):
 
   return shapely_contours
 
-def find_intersection:
+def find_intersection(polygon_cores, watershed_boundary):
   # Create Geoseries from polygon cores; will be needed for intersection 
-  print("Test") 
+  cores_gs = gpd.GeoSeries(polygon_cores)
+
+  # Polygonize the watershed boundary (currently a Linnearring)
+  polygons, dangles, cuts, invalids = polygonize_full(watershed_boundary) 
+
+  # Get intersection
+  intersections = cores_gs.intersection(polygons)
+  print(intersections)
+
+  return cores_gs, polygons, intersections
+
+def check_area_intersections(intersections, watershed_polygon):
+  print(watershed_polygon.area) # left off here
 

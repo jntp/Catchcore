@@ -9,16 +9,9 @@ import cartopy.crs as ccrs
 import cartopy.feature as cfeature 
 from netCDF4 import Dataset
 import numpy as np
-import metpy.plots as mpplots
-import pprint # test
-from shapely.geometry import Point 
+import metpy.plots as mpplots 
 from libs.segmentation import *
 from libs.intersection import *
-from skimage.measure import find_contours # temp
-from shapely.geometry import shape # temp
-from shapely.geometry import Polygon 
-from shapely.geometry.polygon import LinearRing
-from shapely.ops import polygonize_full # test 
 
 # Create a base map to display Watershed and radar imagery
 def new_map(fig, lon, lat):
@@ -140,27 +133,18 @@ def main():
   x = out_xyz[:, :, 0] 
   y = out_xyz[:, :, 1]
 
-  # Test... finding the linewidth of the segmented contours
+  # Intersection - Find Intersections between cores and watershed 
   ref_ref = ref_refs[34] 
   labeled_ncfr, labeled_cores = segmentation(ref_ref)
-  test_contours = find_contours(labeled_cores, 0)
-  shapely_kantours = get_core_contours(labeled_cores, lons, lats)
+  shapely_contours = get_core_contours(labeled_cores, lons, lats)
+  santa_ana_boundary = watershed.geometry[1].boundary
+  cores_gs, santa_ana_polygon, santa_ana_intersections = find_intersection(shapely_contours, santa_ana_boundary)
+  check_area_intersections(santa_ana_intersections, santa_ana_polygon)
 
-  # Plot the shapely contours????
-  ax.add_geometries(shapely_kantours, crs = ccrs.PlateCarree(), zorder = 2, facecolor = 'green', edgecolor = 'green')
-
-  cores_gs = gpd.GeoSeries(shapely_kantours) 
-
-  # Test; use this for intersection!!!
-  test_boundary = watershed.geometry[1].boundary
-  test_series = gpd.GeoSeries(test_boundary)
-  ax.add_geometries(test_boundary, crs = ccrs.PlateCarree(), zorder = 1, facecolor = 'red', edgecolor = 'red')
-  polygons, dangles, cuts, invalids = polygonize_full(test_boundary) # Left off here... find area of polygons now
-
-  test_intersections = cores_gs.intersection(polygons)
-  print(test_intersections) # It returned something??? Plot this 
-
-  ax.add_geometries(test_intersections, crs = ccrs.PlateCarree(), zorder = 3, facecolor = 'yellow', edgecolor = 'yellow')
+  # Plot the shapely geometries and intersections
+  ax.add_geometries(shapely_contours, crs = ccrs.PlateCarree(), zorder = 2, facecolor = 'green', edgecolor = 'green')
+  ax.add_geometries(santa_ana_polygon, crs = ccrs.PlateCarree(), zorder = 1, facecolor = 'red', edgecolor = 'red')
+  ax.add_geometries(santa_ana_intersections, crs = ccrs.PlateCarree(), zorder = 3, facecolor = 'yellow', edgecolor = 'yellow')
   plt.show() 
 
   # new_refs = new_reflectivity(ref_ref)
@@ -225,7 +209,6 @@ def main():
     ax.add_artist(text)
 
     return contour
-
 
   # Call animate function
   # ani = FuncAnimation(fig, animate_contour, interval = 100, frames = len(ref_refs))
