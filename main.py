@@ -85,8 +85,11 @@ def plot_single(ax, x, y, ref_cmap, ref_norm, new_refs, labeled_image):
 
 ## ** Main Function where everything happens **
 def main():
-  # Load watershed
-  watershed = gpd.read_file("santa_ana_r_a.geojson")
+  # Load watersheds
+  sepulveda = gpd.read_file("LA_R_A_Sepulveda_Dam.geojson")
+  whittier = gpd.read_file("Rio_Hondo_AB_Whittier_Narrows_Dam.geojson") 
+  santa_ana = gpd.read_file("santa_ana_r_a.geojson")
+  san_diego = gpd.read_file("SD_R_A_Fashion_Valley.geojson") 
 
   # Load NEXRAD data from netcdf4 file
   ncfile = '/media/jntp/D2BC15A1BC1580E1/NCFRs/20170217_18.nc'
@@ -133,13 +136,17 @@ def main():
   x = out_xyz[:, :, 0] 
   y = out_xyz[:, :, 1]
 
-  # Intersection - Find Intersections between cores and watershed 
-  ref_ref = ref_refs[34] 
+  ## Intersection - Find Intersections between cores and watershed 
+  ref_ref = ref_refs[38] 
   labeled_ncfr, labeled_cores = segmentation(ref_ref)
   shapely_contours = get_core_contours(labeled_cores, lons, lats)
-  santa_ana_boundary = watershed.geometry[1].boundary
+
+  # Sepulveda Dam Intersection 
+  
+  # Santa Ana Intersection
+  santa_ana_boundary = santa_ana.geometry[1].boundary
   cores_gs, santa_ana_polygon, santa_ana_intersections = find_intersection(shapely_contours, santa_ana_boundary)
-  check_area_intersections(santa_ana_intersections, santa_ana_polygon)
+  santa_ana_proportion, santa_ana_cross = check_area_intersections(santa_ana_intersections, santa_ana_polygon)
 
   # Plot the shapely geometries and intersections
   ax.add_geometries(shapely_contours, crs = ccrs.PlateCarree(), zorder = 2, facecolor = 'green', edgecolor = 'green')
@@ -217,5 +224,7 @@ def main():
 if __name__ == '__main__':
   main() 
 
-# Yes!!
-# Now find area of intersecting polygons and reorganize/clean code
+# Next Steps
+# Incorporate for all 4 watersheds
+# Write to xls file, check for intersection twice
+# Get maximum reflectivity

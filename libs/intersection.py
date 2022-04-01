@@ -27,10 +27,12 @@ def get_core_contours(labeled_cores, lons, lats):
       contour_points.append((lons_contour[k], lats_contour[k]))
 
     # Make the shapely polygon from contour points
-    shapely_contour = Polygon(contour_points) 
+    shapely_contour = Polygon(contour_points)
 
-    # Store geometry in array
-    shapely_contours.append(shapely_contour)
+    # Check if the polygon is valid
+    if shapely_contour.is_valid:
+      # Store geometry in array
+      shapely_contours.append(shapely_contour)
 
   return shapely_contours
 
@@ -47,6 +49,13 @@ def find_intersection(polygon_cores, watershed_boundary):
 
   return cores_gs, polygons, intersections
 
-def check_area_intersections(intersections, watershed_polygon):
-  print(watershed_polygon.area) # left off here
+def check_area_intersections(intersections, watershed_polygon, threshold = 0.05):
+  proportions = intersections.area / watershed_polygon.area
+  is_sufficient = False
+
+  # Check if sum of proportions meets the threshold
+  if sum(proportions) >= threshold:
+    is_sufficient = True
+
+  return sum(proportions), is_sufficient
 
