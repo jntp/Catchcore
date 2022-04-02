@@ -41,13 +41,12 @@ def find_intersection(polygon_cores, watershed_boundary):
   cores_gs = gpd.GeoSeries(polygon_cores)
 
   # Polygonize the watershed boundary (currently a Linnearring)
-  polygons, dangles, cuts, invalids = polygonize_full(watershed_boundary) 
+  polygons, dangles, cuts, invalids = polygonize_full(watershed_boundary)
 
   # Get intersection
   intersections = cores_gs.intersection(polygons)
-  print(intersections)
 
-  return cores_gs, polygons, intersections
+  return polygons, intersections
 
 def check_area_intersections(intersections, watershed_polygon, threshold = 0.05):
   proportions = intersections.area / watershed_polygon.area

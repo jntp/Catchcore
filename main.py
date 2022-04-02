@@ -137,20 +137,38 @@ def main():
   y = out_xyz[:, :, 1]
 
   ## Intersection - Find Intersections between cores and watershed 
-  ref_ref = ref_refs[38] 
+  ref_ref = ref_refs[36] 
   labeled_ncfr, labeled_cores = segmentation(ref_ref)
   shapely_contours = get_core_contours(labeled_cores, lons, lats)
 
-  # Sepulveda Dam Intersection 
+  # Sepulveda Dam Intersection
+  sepulveda_boundary = sepulveda.geometry[1].boundary
+  sepulveda_polygon, sepulveda_intersections = find_intersection(shapely_contours, sepulveda_boundary)
+  sepulveda_proportion, sepulveda_cross = check_area_intersections(sepulveda_intersections, sepulveda_polygon)
+
+  # Whittier Narrows Intersection
+  whittier_boundary = whittier.geometry[1].boundary
+  whittier_polygon, whittier_intersections = find_intersection(shapely_contours, whittier_boundary)
+  whittier_proportion, whittier_cross = check_area_intersections(whittier_intersections, whittier_polygon)
   
   # Santa Ana Intersection
   santa_ana_boundary = santa_ana.geometry[1].boundary
-  cores_gs, santa_ana_polygon, santa_ana_intersections = find_intersection(shapely_contours, santa_ana_boundary)
+  santa_ana_polygon, santa_ana_intersections = find_intersection(shapely_contours, santa_ana_boundary)
   santa_ana_proportion, santa_ana_cross = check_area_intersections(santa_ana_intersections, santa_ana_polygon)
+
+  # San Diego River Intersection; why isn't this loading?!?!?!?!
+  san_diego_boundary = san_diego.geometry[1].boundary 
+  sd_boundary = gpd.GeoSeries(san_diego_boundary)
+  san_diego_polygon, san_diego_intersections = find_intersection(shapely_contours, san_diego_boundary)
+  san_diego_proportion, san_diego_cross = check_area_intersections(san_diego_intersections, san_diego_polygon)
 
   # Plot the shapely geometries and intersections
   ax.add_geometries(shapely_contours, crs = ccrs.PlateCarree(), zorder = 2, facecolor = 'green', edgecolor = 'green')
+  ax.add_geometries(sepulveda_polygon, crs = ccrs.PlateCarree(), zorder = 1, facecolor = 'red', edgecolor = 'red') 
+  ax.add_geometries(whittier_polygon, crs = ccrs.PlateCarree(), zorder = 1, facecolor = 'red', edgecolor = 'red')
   ax.add_geometries(santa_ana_polygon, crs = ccrs.PlateCarree(), zorder = 1, facecolor = 'red', edgecolor = 'red')
+  ax.add_geometries(san_diego_polygon, crs = ccrs.PlateCarree(), zorder = 1, facecolor = 'red', edgecolor = 'red')
+  ax.add_geometries(sepulveda_intersections, crs = ccrs.PlateCarree(), zorder = 3, facecolor = 'yellow', edgecolor = 'yellow') 
   ax.add_geometries(santa_ana_intersections, crs = ccrs.PlateCarree(), zorder = 3, facecolor = 'yellow', edgecolor = 'yellow')
   plt.show() 
 
