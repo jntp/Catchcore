@@ -264,7 +264,7 @@ def check_axis(refs, labeled_cells, min_length = 250):
   Parameters:
   refs - radar image (reflectivity)
   labeled_cells - labeled image of convective cells
-  min_length - minimum length to be considered an NCFR
+  min_length - minimum length to be considered an NCFR (default: 250px)
 
   Returns:
   labeled_ncfr - updated labeled image that shows the NCFR
@@ -305,4 +305,17 @@ def extract_cores(refs, labeled_ncfr, conv_buffer, min_ref = 45):
   # Remove small holes
   labeled_cores = close_holes(labeled_cores, 3) 
 
-  return labeled_cores 
+  return labeled_cores
+
+def remove_small_cells(refs, labeled_cells, max_area = 1800):
+  # Create labeled image and regions
+  labeled_image, num_features = label(1 * (labeled_cells > 0), np.ones((3, 3)))
+  regions = regionprops(labeled_image, intensity_image = refs)
+
+  # Check the area of each region
+  for region in regions:
+    print(region.area) # temp
+    if region.area < max_area:
+      labeled_image = remove_region(region, labeled_image)
+
+  return labeled_image

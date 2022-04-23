@@ -12,6 +12,7 @@ import numpy as np
 import metpy.plots as mpplots 
 from libs.segmentation import *
 from libs.intersection import *
+from shapely.geometry import Polygon # temp
 
 # Create a base map to display Watershed and radar imagery
 def new_map(fig, lon, lat):
@@ -69,7 +70,20 @@ def segmentation(refs, core_buffer = 30, conv_buffer = 3):
   labeled_ncfr = check_axis(refs, merged_cells)  
   labeled_cores = extract_cores(refs, labeled_ncfr, conv_buffer)
 
-  return labeled_ncfr, labeled_cores 
+  # temporary comment... stop @ narrow_conv_cells2 for later frames?
+  # Then remove small cells
+
+  # Check if the algorithm returns nothing
+  if not any(map(any, labeled_cores)): # consider checking for regions lol
+    print("Activating back up plan")
+    # Run segmentation procedure again
+    conv_cells = find_convective_cells(refs)
+    closed_cells = close_holes(conv_cells, conv_buffer)
+    narrow_conv_cells = remove_wide_cells(refs, closed_cells, 120) # increase width of cells
+    narrow_conv_cells2 = remove_adjacent_cells(refs, narrow_conv_cells) 
+    labeled_cores = remove_small_cells(refs, narrow_conv_cells2)
+
+  return labeled_ncfr, labeled_cores, labeled_cores # only 2 outputs
 
 # Plots a single image
 def plot_single(ax, x, y, ref_cmap, ref_norm, new_refs, labeled_image):
@@ -99,6 +113,9 @@ def main():
   # Get data from netcdf file
   lons = nexdata['Longitude'][:][:]
   lats = nexdata['Latitude'][:][:]
+  print(min(map(min, lons)), max(map(max, lons)))
+  print(min(map(min, lats)), max(map(max, lats))) 
+  maxlons = max(map(max, lons))
  
   ref_refs = nexdata['Reflectivity'][:] # reference reflectivity
   years = nexdata['Year'][:]
@@ -113,7 +130,7 @@ def main():
           np.min(lons), ref_rows, ref_cols) 
 
   # Specify a central longitude and latitude (i.e. reference point)
-  central_lon = -117.636
+  central_lon = -117.636 
   central_lat = 33.818
 
   # Create a new figure and map 
@@ -137,12 +154,14 @@ def main():
   y = out_xyz[:, :, 1]
 
   ## Intersection - Find Intersections between cores and watershed 
-  ref_ref = ref_refs[36] 
-  labeled_ncfr, labeled_cores = segmentation(ref_ref)
+  ref_ref = ref_refs[50] 
+  labeled_ncfr, labeled_cores, conv_cells = segmentation(ref_ref) # only 2 outputs
   shapely_contours = get_core_contours(labeled_cores, lons, lats)
+  # possible that sd watershed is too far southeast for lat lon matrix
+  # Change to geojson file... see if can intersect point or bounds box???
 
   # Sepulveda Dam Intersection
-  sepulveda_boundary = sepulveda.geometry[1].boundary
+  sepulveda_boundary = sepulveda.geometry[1].boundary 
   sepulveda_polygon, sepulveda_intersections = find_intersection(shapely_contours, sepulveda_boundary)
   sepulveda_proportion, sepulveda_cross = check_area_intersections(sepulveda_intersections, sepulveda_polygon)
 
@@ -158,22 +177,37 @@ def main():
 
   # San Diego River Intersection; why isn't this loading?!?!?!?!
   san_diego_boundary = san_diego.geometry[1].boundary 
-  sd_boundary = gpd.GeoSeries(san_diego_boundary)
-  san_diego_polygon, san_diego_intersections = find_intersection(shapely_contours, san_diego_boundary)
-  san_diego_proportion, san_diego_cross = check_area_intersections(san_diego_intersections, san_diego_polygon)
+  print(san_diego.geometry.bounds)
+  # Create "bounding box"
+  bounds = san_diego.geometry[1].bounds
+  # (minx, miny), (maxlons, miny), (maxlons, maxy), (minx, maxy), (minx, miny)
+  polygon_coords = [(bounds[0], bounds[1]), (maxlons, bounds[1]), (maxlons, bounds[3]), (bounds[0], bounds[3]), \
+      (bounds[0], bounds[1])] # plot this next
+  polygon_bounds = Polygon(polygon_coords)
+  pb_series = gpd.GeoSeries(polygon_bounds)
+
+  cores_gs = gpd.GeoSeries(shapely_contours) # test
+  test_intersections = cores_gs.intersection(polygon_bounds)
+  print(test_intersections) # it returned something? check this in further detail
+
+  # san_diego_polygon, san_diego_intersections = find_intersection(shapely_contours, san_diego_boundary)
+  # san_diego_proportion, san_diego_cross = check_area_intersections(san_diego_intersections, san_diego_polygon)
 
   # Plot the shapely geometries and intersections
-  ax.add_geometries(shapely_contours, crs = ccrs.PlateCarree(), zorder = 2, facecolor = 'green', edgecolor = 'green')
+  # ax.add_geometries(shapely_contours, crs = ccrs.PlateCarree(), zorder = 2, facecolor = 'green', edgecolor = 'green')
   ax.add_geometries(sepulveda_polygon, crs = ccrs.PlateCarree(), zorder = 1, facecolor = 'red', edgecolor = 'red') 
   ax.add_geometries(whittier_polygon, crs = ccrs.PlateCarree(), zorder = 1, facecolor = 'red', edgecolor = 'red')
   ax.add_geometries(santa_ana_polygon, crs = ccrs.PlateCarree(), zorder = 1, facecolor = 'red', edgecolor = 'red')
-  ax.add_geometries(san_diego_polygon, crs = ccrs.PlateCarree(), zorder = 1, facecolor = 'red', edgecolor = 'red')
+  ax.add_geometries(san_diego.geometry, crs = ccrs.PlateCarree(), zorder = 1, facecolor = 'red', edgecolor = 'red')
   ax.add_geometries(sepulveda_intersections, crs = ccrs.PlateCarree(), zorder = 3, facecolor = 'yellow', edgecolor = 'yellow') 
+  ax.add_geometries(whittier_intersections, crs = ccrs.PlateCarree(), zorder = 3, facecolor = 'yellow', edgecolor = 'yellow')
   ax.add_geometries(santa_ana_intersections, crs = ccrs.PlateCarree(), zorder = 3, facecolor = 'yellow', edgecolor = 'yellow')
-  plt.show() 
+  ax.add_geometries(test_intersections, crs = ccrs.PlateCarree(), zorder = 3, facecolor = 'yellow', edgecolor = 'yellow') 
 
-  # new_refs = new_reflectivity(ref_ref)
-  # plot_single(ax, x, y, ref_cmap, ref_norm, new_refs, labeled_cores)
+  new_refs = new_reflectivity(ref_ref)
+  plot_single(ax, x, y, ref_cmap, ref_norm, new_refs, conv_cells) # last arg is labeled_cores
+
+  plt.show()
 
   ## Animate the Plot
   def animate_contour(i):
@@ -246,3 +280,10 @@ if __name__ == '__main__':
 # Incorporate for all 4 watersheds
 # Write to xls file, check for intersection twice
 # Get maximum reflectivity
+
+# Left off at improving alogirthm near SD boundary
+# How come the detected NCFR candiate disappears after you "remove wide cells?" 
+# Look up how to crop SD watershed polygon
+# Perhaps make another animation of the updated algorithm?
+# Hard Part: Get the SD watershed to display as a polygon properly
+

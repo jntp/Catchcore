@@ -40,7 +40,7 @@ def find_intersection(polygon_cores, watershed_boundary):
   # Create Geoseries from polygon cores; will be needed for intersection 
   cores_gs = gpd.GeoSeries(polygon_cores)
 
-  # Polygonize the watershed boundary (currently a Linnearring)
+  # Polygonize the watershed boundary (currently a linearring or linestring)
   polygons, dangles, cuts, invalids = polygonize_full(watershed_boundary)
 
   # Get intersection
@@ -58,3 +58,5 @@ def check_area_intersections(intersections, watershed_polygon, threshold = 0.05)
 
   return sum(proportions), is_sufficient
 
+# Later Write an SD specific intersection function that seeks if the bounds of NCFR WILL intersect with
+# bounds of watershed. But first write code for Propagation statistics
