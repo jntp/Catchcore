@@ -12,7 +12,6 @@ import numpy as np
 import metpy.plots as mpplots 
 from libs.segmentation import *
 from libs.intersection import *
-from shapely.geometry import Polygon # temp
 
 # Create a base map to display Watershed and radar imagery
 def new_map(fig, lon, lat):
@@ -70,13 +69,9 @@ def segmentation(refs, core_buffer = 30, conv_buffer = 3):
   labeled_ncfr = check_axis(refs, merged_cells)  
   labeled_cores = extract_cores(refs, labeled_ncfr, conv_buffer)
 
-  # temporary comment... stop @ narrow_conv_cells2 for later frames?
-  # Then remove small cells
-
   # Check if the algorithm returns nothing
-  if not any(map(any, labeled_cores)): # consider checking for regions lol
-    print("Activating back up plan")
-    # Run segmentation procedure again
+  if not any(map(any, labeled_cores)):
+    # Run segmentation procedure again but stop at Step 4 and remove small cells
     conv_cells = find_convective_cells(refs)
     closed_cells = close_holes(conv_cells, conv_buffer)
     narrow_conv_cells = remove_wide_cells(refs, closed_cells, 120) # increase width of cells
@@ -112,10 +107,7 @@ def main():
 
   # Get data from netcdf file
   lons = nexdata['Longitude'][:][:]
-  lats = nexdata['Latitude'][:][:]
-  print(min(map(min, lons)), max(map(max, lons)))
-  print(min(map(min, lats)), max(map(max, lats))) 
-  maxlons = max(map(max, lons))
+  lats = nexdata['Latitude'][:][:] 
  
   ref_refs = nexdata['Reflectivity'][:] # reference reflectivity
   years = nexdata['Year'][:]
@@ -175,34 +167,23 @@ def main():
   santa_ana_polygon, santa_ana_intersections = find_intersection(shapely_contours, santa_ana_boundary)
   santa_ana_proportion, santa_ana_cross = check_area_intersections(santa_ana_intersections, santa_ana_polygon)
 
-  # San Diego River Intersection; why isn't this loading?!?!?!?!
+  # San Diego River Intersection
   san_diego_boundary = san_diego.geometry[1].boundary 
-  print(san_diego.geometry.bounds)
-  # Create "bounding box"
-  bounds = san_diego.geometry[1].bounds
-  # (minx, miny), (maxlons, miny), (maxlons, maxy), (minx, maxy), (minx, miny)
-  polygon_coords = [(bounds[0], bounds[1]), (maxlons, bounds[1]), (maxlons, bounds[3]), (bounds[0], bounds[3]), \
-      (bounds[0], bounds[1])] # plot this next
-  polygon_bounds = Polygon(polygon_coords)
-  pb_series = gpd.GeoSeries(polygon_bounds)
-
-  cores_gs = gpd.GeoSeries(shapely_contours) # test
-  test_intersections = cores_gs.intersection(polygon_bounds)
-  print(test_intersections) # it returned something? check this in further detail
-
-  # san_diego_polygon, san_diego_intersections = find_intersection(shapely_contours, san_diego_boundary)
-  # san_diego_proportion, san_diego_cross = check_area_intersections(san_diego_intersections, san_diego_polygon)
+  sd_polygon, san_diego_intersections = find_intersection(shapely_contours, san_diego_boundary, 1)
+  san_diego_polygon = gpd.GeoSeries(sd_polygon) # turn sd_polygon into geoseries since it is currently 1 polygon and not iterable
+  san_diego_proportion, san_diego_cross = check_area_intersections(san_diego_intersections, sd_polygon)
+  print(san_diego_proportion, san_diego_cross)
 
   # Plot the shapely geometries and intersections
   # ax.add_geometries(shapely_contours, crs = ccrs.PlateCarree(), zorder = 2, facecolor = 'green', edgecolor = 'green')
   ax.add_geometries(sepulveda_polygon, crs = ccrs.PlateCarree(), zorder = 1, facecolor = 'red', edgecolor = 'red') 
   ax.add_geometries(whittier_polygon, crs = ccrs.PlateCarree(), zorder = 1, facecolor = 'red', edgecolor = 'red')
   ax.add_geometries(santa_ana_polygon, crs = ccrs.PlateCarree(), zorder = 1, facecolor = 'red', edgecolor = 'red')
-  ax.add_geometries(san_diego.geometry, crs = ccrs.PlateCarree(), zorder = 1, facecolor = 'red', edgecolor = 'red')
+  ax.add_geometries(san_diego_polygon, crs = ccrs.PlateCarree(), zorder = 1, facecolor = 'red', edgecolor = 'red')
   ax.add_geometries(sepulveda_intersections, crs = ccrs.PlateCarree(), zorder = 3, facecolor = 'yellow', edgecolor = 'yellow') 
   ax.add_geometries(whittier_intersections, crs = ccrs.PlateCarree(), zorder = 3, facecolor = 'yellow', edgecolor = 'yellow')
   ax.add_geometries(santa_ana_intersections, crs = ccrs.PlateCarree(), zorder = 3, facecolor = 'yellow', edgecolor = 'yellow')
-  ax.add_geometries(test_intersections, crs = ccrs.PlateCarree(), zorder = 3, facecolor = 'yellow', edgecolor = 'yellow') 
+  ax.add_geometries(san_diego_intersections, crs = ccrs.PlateCarree(), zorder = 3, facecolor = 'yellow', edgecolor = 'yellow') 
 
   new_refs = new_reflectivity(ref_ref)
   plot_single(ax, x, y, ref_cmap, ref_norm, new_refs, conv_cells) # last arg is labeled_cores
@@ -277,13 +258,8 @@ if __name__ == '__main__':
   main() 
 
 # Next Steps
-# Incorporate for all 4 watersheds
+# Create new animation of new algorithm
+# Test for proportion threshold (NCFR intersection/watershed) of each watershed
 # Write to xls file, check for intersection twice
 # Get maximum reflectivity
-
-# Left off at improving alogirthm near SD boundary
-# How come the detected NCFR candiate disappears after you "remove wide cells?" 
-# Look up how to crop SD watershed polygon
-# Perhaps make another animation of the updated algorithm?
-# Hard Part: Get the SD watershed to display as a polygon properly
 

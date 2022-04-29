@@ -314,7 +314,6 @@ def remove_small_cells(refs, labeled_cells, max_area = 1800):
 
   # Check the area of each region
   for region in regions:
-    print(region.area) # temp
     if region.area < max_area:
       labeled_image = remove_region(region, labeled_image)
 

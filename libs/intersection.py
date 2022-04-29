@@ -2,7 +2,29 @@ import numpy as np
 import geopandas as gpd
 from skimage.measure import find_contours
 from shapely.geometry import Polygon
-from shapely.ops import polygonize_full 
+from shapely.ops import polygonize_full
+
+## "Auxiliary functions" used to shorten code
+
+def polygonize_watershed_boundary(watershed_boundary, code = 0):
+  # Check if default or "work around" method would be used for polygonizing watershed
+  if code == 0: # default
+    # Polygonize the watershed boundary (currently a linearring or linestring)
+    polygons, dangles, cuts, invalids = polygonize_full(watershed_boundary)
+
+    # Return a set of polygons
+    return polygons
+  elif code == 1: # work around if default method does not work (i.e. SD watershed)
+    # Get the coordinates of watershed boundary
+    watershed_coords = watershed_boundary.coords
+
+    # Make a polygon out of the boundaries
+    polygon = Polygon(watershed_coords)
+
+    # Return a SINGLE polygon
+    return polygon
+
+## Intersection Steps
 
 def get_core_contours(labeled_cores, lons, lats):
   # Find contours from labeled_cores
@@ -36,17 +58,17 @@ def get_core_contours(labeled_cores, lons, lats):
 
   return shapely_contours
 
-def find_intersection(polygon_cores, watershed_boundary):
+def find_intersection(polygon_cores, watershed_boundary, code = 0):
   # Create Geoseries from polygon cores; will be needed for intersection 
   cores_gs = gpd.GeoSeries(polygon_cores)
 
   # Polygonize the watershed boundary (currently a linearring or linestring)
-  polygons, dangles, cuts, invalids = polygonize_full(watershed_boundary)
+  watershed_polygon = polygonize_watershed_boundary(watershed_boundary, code)
 
   # Get intersection
-  intersections = cores_gs.intersection(polygons)
+  intersections = cores_gs.intersection(watershed_polygon)
 
-  return polygons, intersections
+  return watershed_polygon, intersections
 
 def check_area_intersections(intersections, watershed_polygon, threshold = 0.05):
   proportions = intersections.area / watershed_polygon.area
