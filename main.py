@@ -48,10 +48,11 @@ def new_reflectivity(refs):
   return new_refs
 
 # Runs the functions needed to delineate the boundaries of the NCFR and its cores
-def segmentation(refs, core_buffer = 30, conv_buffer = 3):
+def segmentation(refs, i = 0, core_buffer = 30, conv_buffer = 3):
   """
+    i - timestep of the radar loop, only needed for the animation (default: 0)
     core_buffer - size of search radius to connect cells (default: 30px) 
-    conv_buffer - size of "holes" to fill in convective cells and clusters (default: 3px) 
+    conv_buffer - size of "holes" to fill in convective cells and clusters (default: 3px)  
   """
   # Segmentation Steps
   # Step 1 - Extract convective cells
@@ -69,8 +70,8 @@ def segmentation(refs, core_buffer = 30, conv_buffer = 3):
   labeled_ncfr = check_axis(refs, merged_cells)  
   labeled_cores = extract_cores(refs, labeled_ncfr, conv_buffer)
 
-  # Check if the algorithm returns nothing
-  if not any(map(any, labeled_cores)):
+  # Check if the algorithm returns nothing and that the timestep is later in the animation
+  if not any(map(any, labeled_cores)) and i >= 40:
     # Run segmentation procedure again but stop at Step 4 and remove small cells
     conv_cells = find_convective_cells(refs)
     closed_cells = close_holes(conv_cells, conv_buffer)
@@ -78,7 +79,30 @@ def segmentation(refs, core_buffer = 30, conv_buffer = 3):
     narrow_conv_cells2 = remove_adjacent_cells(refs, narrow_conv_cells) 
     labeled_cores = remove_small_cells(refs, narrow_conv_cells2)
 
-  return labeled_ncfr, labeled_cores, labeled_cores # only 2 outputs
+  return labeled_ncfr, labeled_cores
+
+def intersection(shapely_cores, watershed, code = 0):
+  if code == 0:
+    watershed_boundary = watershed.geometry[1].boundary 
+    watershed_polygon, watershed_intersections = find_intersection(shapely_cores, watershed_boundary)
+    watershed_proportion, watershed_cross = check_area_intersections(watershed_intersections, watershed_polygon)
+
+    return watershed_polygon, watershed_intersections, watershed_proportion, watershed_cross
+  elif code == 1:
+    watershed_boundary = watershed.geometry[1].boundary 
+    water_polygon, watershed_intersections = find_intersection(shapely_cores, watershed_boundary, 1)
+    watershed_polygon = gpd.GeoSeries(water_polygon) # turn water_polygon into geoseries since it is currently 1 polygon and not iterable
+    watershed_proportion, watershed_cross = check_area_intersections(watershed_intersections, water_polygon)
+
+    return watershed_polygon, watershed_intersections, watershed_proportion, watershed_cross
+
+def plot_watershed_polygons(ax, *polygons):
+  for polygon in polygons:
+    ax.add_geometries(polygon, crs = ccrs.PlateCarree(), zorder = 1, facecolor = 'red', edgecolor = 'red') 
+
+def plot_intersections(ax, *intersecting_polygons):
+  for intersecting_polygon in intersecting_polygons:
+     ax.add_geometries(intersecting_polygon, crs = ccrs.PlateCarree(), zorder = 3, facecolor = 'yellow', edgecolor = 'yellow') 
 
 # Plots a single image
 def plot_single(ax, x, y, ref_cmap, ref_norm, new_refs, labeled_image):
@@ -91,6 +115,27 @@ def plot_single(ax, x, y, ref_cmap, ref_norm, new_refs, labeled_image):
 
   plt.show() 
 
+def format_time(years_i, months_i, days_i, hours_i, minutes_i):
+  # Extract "singular" time from time variables
+  year = str(int(years_i))
+  month = str(int(months_i))
+  day = str(int(days_i))
+  hour = int(hours_i)
+  minute = int(minutes_i)
+
+  # Format the hour and minute so it will display properly
+  if hour < 10:
+    hour = "0" + str(hour) 
+  else:
+    hour = str(hour)
+
+  if minute < 10:
+    minute = "0" + str(minute)
+  else:
+    minute = str(minute)
+
+  return year, month, day, hour, minute
+ 
 
 ## ** Main Function where everything happens **
 def main():
@@ -109,7 +154,7 @@ def main():
   lons = nexdata['Longitude'][:][:]
   lats = nexdata['Latitude'][:][:] 
  
-  ref_refs = nexdata['Reflectivity'][:] # reference reflectivity
+  ref_refs = nexdata['Reflectivity'][:] # reflectivities, used for animation
   years = nexdata['Year'][:]
   months = nexdata['Month'][:]
   days = nexdata['Day'][:]
@@ -145,50 +190,29 @@ def main():
   x = out_xyz[:, :, 0] 
   y = out_xyz[:, :, 1]
 
-  ## Intersection - Find Intersections between cores and watershed 
-  ref_ref = ref_refs[50] 
-  labeled_ncfr, labeled_cores, conv_cells = segmentation(ref_ref) # only 2 outputs
-  shapely_contours = get_core_contours(labeled_cores, lons, lats)
-  # possible that sd watershed is too far southeast for lat lon matrix
-  # Change to geojson file... see if can intersect point or bounds box???
+  ## Intersection - Find Intersections between cores and watershed; comment out if animating
+  # Initiation
+  # ts = 50 # timestep
+  # ref_ref = ref_refs[50] 
+  # labeled_ncfr, labeled_cores = segmentation(ref_ref, ts)
+  # shapely_contours = get_core_contours(labeled_cores, lons, lats)
 
-  # Sepulveda Dam Intersection
-  sepulveda_boundary = sepulveda.geometry[1].boundary 
-  sepulveda_polygon, sepulveda_intersections = find_intersection(shapely_contours, sepulveda_boundary)
-  sepulveda_proportion, sepulveda_cross = check_area_intersections(sepulveda_intersections, sepulveda_polygon)
-
-  # Whittier Narrows Intersection
-  whittier_boundary = whittier.geometry[1].boundary
-  whittier_polygon, whittier_intersections = find_intersection(shapely_contours, whittier_boundary)
-  whittier_proportion, whittier_cross = check_area_intersections(whittier_intersections, whittier_polygon)
-  
-  # Santa Ana Intersection
-  santa_ana_boundary = santa_ana.geometry[1].boundary
-  santa_ana_polygon, santa_ana_intersections = find_intersection(shapely_contours, santa_ana_boundary)
-  santa_ana_proportion, santa_ana_cross = check_area_intersections(santa_ana_intersections, santa_ana_polygon)
-
-  # San Diego River Intersection
-  san_diego_boundary = san_diego.geometry[1].boundary 
-  sd_polygon, san_diego_intersections = find_intersection(shapely_contours, san_diego_boundary, 1)
-  san_diego_polygon = gpd.GeoSeries(sd_polygon) # turn sd_polygon into geoseries since it is currently 1 polygon and not iterable
-  san_diego_proportion, san_diego_cross = check_area_intersections(san_diego_intersections, sd_polygon)
-  print(san_diego_proportion, san_diego_cross)
+  # Get polygon, intersections, proportion of intersection, and "cross" variable that indicates "true" intersection
+  # sepulveda_polygon, sepulveda_intersections, sepulveda_proportion, sepulveda_cross = intersection(shapely_contours, sepulveda)
+  # whittier_polygon, whittier_intersections, whittier_proportion, whittier_cross = intersection(shapely_contours, whittier)
+  # santa_ana_polygon, santa_ana_intersections, santa_ana_proportion, santa_ana_cross = intersection(shapely_contours, santa_ana)
+  # san_diego_polygon, san_diego_intersections, san_diego_proportion, san_diego_cross = intersection(shapely_contours, san_diego, 1)
 
   # Plot the shapely geometries and intersections
   # ax.add_geometries(shapely_contours, crs = ccrs.PlateCarree(), zorder = 2, facecolor = 'green', edgecolor = 'green')
-  ax.add_geometries(sepulveda_polygon, crs = ccrs.PlateCarree(), zorder = 1, facecolor = 'red', edgecolor = 'red') 
-  ax.add_geometries(whittier_polygon, crs = ccrs.PlateCarree(), zorder = 1, facecolor = 'red', edgecolor = 'red')
-  ax.add_geometries(santa_ana_polygon, crs = ccrs.PlateCarree(), zorder = 1, facecolor = 'red', edgecolor = 'red')
-  ax.add_geometries(san_diego_polygon, crs = ccrs.PlateCarree(), zorder = 1, facecolor = 'red', edgecolor = 'red')
-  ax.add_geometries(sepulveda_intersections, crs = ccrs.PlateCarree(), zorder = 3, facecolor = 'yellow', edgecolor = 'yellow') 
-  ax.add_geometries(whittier_intersections, crs = ccrs.PlateCarree(), zorder = 3, facecolor = 'yellow', edgecolor = 'yellow')
-  ax.add_geometries(santa_ana_intersections, crs = ccrs.PlateCarree(), zorder = 3, facecolor = 'yellow', edgecolor = 'yellow')
-  ax.add_geometries(san_diego_intersections, crs = ccrs.PlateCarree(), zorder = 3, facecolor = 'yellow', edgecolor = 'yellow') 
+  # plot_watershed_polygons(ax, sepulveda_polygon, whittier_polygon, santa_ana_polygon, san_diego_polygon)
+  # plot_intersections(ax, sepulveda_intersections, whittier_intersections, santa_ana_intersections, san_diego_intersections)
 
-  new_refs = new_reflectivity(ref_ref)
-  plot_single(ax, x, y, ref_cmap, ref_norm, new_refs, conv_cells) # last arg is labeled_cores
+  # Plot a single image (comment out if animating)
+  # new_refs = new_reflectivity(ref_ref)
+  # plot_single(ax, x, y, ref_cmap, ref_norm, new_refs, conv_cells) # last arg is labeled_cores
 
-  plt.show()
+  # plt.show()
 
   ## Animate the Plot
   def animate_contour(i):
@@ -204,25 +228,10 @@ def main():
     new_refs = new_reflectivity(ref_refs[i])
 
     # Run segmentation algorithm for specific time frame 
-    labeled_ncfr, labeled_cores = segmentation(ref_refs[i])
+    labeled_ncfr, labeled_cores = segmentation(ref_refs[i], i)
 
-    # Extract "singular" time from time variables
-    year = str(int(years[i]))
-    month = str(int(months[i]))
-    day = str(int(days[i]))
-    hour = int(hours[i])
-    minute = int(minutes[i])
-
-    # Format the hour and minute so it will display properly
-    if hour < 10:
-      hour = "0" + str(hour) 
-    else:
-      hour = str(hour)
-
-    if minute < 10:
-      minute = "0" + str(minute)
-    else:
-      minute = str(minute)
+    # Format time variables and convert to string
+    year, month, day, hour, minute = format_time(years[i], months[i], days[i], hours[i], minutes[i]) 
 
     ## Bring back the ax features
     # Add coastlines and states
@@ -250,16 +259,62 @@ def main():
 
     return contour
 
+  ## Animate polygons of watersheds, intersections, and cores
+  def animate_geometries(i):
+    # Clear axes to prevent contours from clobbering up
+    ax.clear()  
+
+    ## Initiation
+    # Create transparent background for reflectivity >= 5 dbZ
+    new_refs = new_reflectivity(ref_refs[i])
+
+    # Run segmentation algorithm for specific time frame 
+    labeled_ncfr, labeled_cores = segmentation(ref_refs[i], i)
+
+    # Obtain shapely geometric contours of the labeled cores
+    shapely_contours = get_core_contours(labeled_cores, lons, lats)
+
+    # Format time variables and convert to string
+    year, month, day, hour, minute = format_time(years[i], months[i], days[i], hours[i], minutes[i]) 
+
+    ## Bring back the ax features
+    # Add coastlines and states
+    ax.add_feature(cfeature.COASTLINE.with_scale('50m'), linewidth = 2)
+    ax.add_feature(cfeature.STATES.with_scale('50m'))
+    
+    # Set limits in lat/lon space
+    ax.set_extent([-121, -114, 32, 36]) # SoCal
+
+    ## Obtain polygons and intersections
+    # Get polygon, intersections, proportion of intersection, and "cross" variable that indicates "true" intersection
+    sepulveda_polygon, sepulveda_intersections, sepulveda_proportion, sepulveda_cross = intersection(shapely_contours, sepulveda)
+    whittier_polygon, whittier_intersections, whittier_proportion, whittier_cross = intersection(shapely_contours, whittier)
+    santa_ana_polygon, santa_ana_intersections, santa_ana_proportion, santa_ana_cross = intersection(shapely_contours, santa_ana)
+    san_diego_polygon, san_diego_intersections, san_diego_proportion, san_diego_cross = intersection(shapely_contours, san_diego, 1)
+
+    ## Plot cores, polygons, intersections, and text
+    # Plot the shapely geometries and intersections
+    ax.add_geometries(shapely_contours, crs = ccrs.PlateCarree(), zorder = 2, facecolor = 'green', edgecolor = 'green')
+    plot_watershed_polygons(ax, sepulveda_polygon, whittier_polygon, santa_ana_polygon, san_diego_polygon)
+    plot_intersections(ax, sepulveda_intersections, whittier_intersections, santa_ana_intersections, san_diego_intersections)
+
+    # Add text
+    date_string = year + "-" + month + "-" + day + " " + hour + ":" + minute + "Z"
+    text = ax.text(0.7, 0.02, date_string, transform = ax.transAxes, fontdict = {'size': 16})
+
+    # Add text as artists 
+    # ax.add_artist(text)
+
+    return text
+    
   # Call animate function
-  # ani = FuncAnimation(fig, animate_contour, interval = 100, frames = len(ref_refs))
-  # ani.save("./plots/20170217_18.gif", writer = PillowWriter(fps = 1))  
+  ani = FuncAnimation(fig, animate_geometries, interval = 100, frames = len(ref_refs))
+  ani.save("./plots/20170217_18_polygon.gif", writer = PillowWriter(fps = 1))  
 
 if __name__ == '__main__':
   main() 
 
 # Next Steps
-# Create new animation of new algorithm
 # Test for proportion threshold (NCFR intersection/watershed) of each watershed
-# Write to xls file, check for intersection twice
+# Write to xls file, check for intersection twice? 
 # Get maximum reflectivity
-
