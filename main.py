@@ -12,6 +12,7 @@ import numpy as np
 import metpy.plots as mpplots 
 from libs.segmentation import *
 from libs.intersection import *
+from libs.propagation_stats import *
 
 # Create a base map to display Watershed and radar imagery
 def new_map(fig, lon, lat):
@@ -192,27 +193,36 @@ def main():
 
   ## Intersection - Find Intersections between cores and watershed; comment out if animating
   # Initiation
-  # ts = 50 # timestep
-  # ref_ref = ref_refs[50] 
-  # labeled_ncfr, labeled_cores = segmentation(ref_ref, ts)
-  # shapely_contours = get_core_contours(labeled_cores, lons, lats)
+  ts = 30 # timestep
+  ref_ref = ref_refs[ts] 
+  labeled_ncfr, labeled_cores = segmentation(ref_ref, ts)
+  shapely_contours = get_core_contours(labeled_cores, lons, lats)
 
   # Get polygon, intersections, proportion of intersection, and "cross" variable that indicates "true" intersection
-  # sepulveda_polygon, sepulveda_intersections, sepulveda_proportion, sepulveda_cross = intersection(shapely_contours, sepulveda)
-  # whittier_polygon, whittier_intersections, whittier_proportion, whittier_cross = intersection(shapely_contours, whittier)
-  # santa_ana_polygon, santa_ana_intersections, santa_ana_proportion, santa_ana_cross = intersection(shapely_contours, santa_ana)
-  # san_diego_polygon, san_diego_intersections, san_diego_proportion, san_diego_cross = intersection(shapely_contours, san_diego, 1)
+  sepulveda_polygon, sepulveda_intersections, sepulveda_proportion, sepulveda_cross = intersection(shapely_contours, sepulveda)
+  whittier_polygon, whittier_intersections, whittier_proportion, whittier_cross = intersection(shapely_contours, whittier)
+  santa_ana_polygon, santa_ana_intersections, santa_ana_proportion, santa_ana_cross = intersection(shapely_contours, santa_ana)
+  san_diego_polygon, san_diego_intersections, san_diego_proportion, san_diego_cross = intersection(shapely_contours, san_diego, 1)
 
   # Plot the shapely geometries and intersections
   # ax.add_geometries(shapely_contours, crs = ccrs.PlateCarree(), zorder = 2, facecolor = 'green', edgecolor = 'green')
-  # plot_watershed_polygons(ax, sepulveda_polygon, whittier_polygon, santa_ana_polygon, san_diego_polygon)
-  # plot_intersections(ax, sepulveda_intersections, whittier_intersections, santa_ana_intersections, san_diego_intersections)
+  plot_watershed_polygons(ax, sepulveda_polygon, whittier_polygon, santa_ana_polygon, san_diego_polygon)
+  plot_intersections(ax, sepulveda_intersections, whittier_intersections, santa_ana_intersections, san_diego_intersections)
 
   # Plot a single image (comment out if animating)
-  # new_refs = new_reflectivity(ref_ref)
-  # plot_single(ax, x, y, ref_cmap, ref_norm, new_refs, conv_cells) # last arg is labeled_cores
+  new_refs = new_reflectivity(ref_ref)
+  plot_single(ax, x, y, ref_cmap, ref_norm, new_refs, labeled_cores)
 
-  # plt.show()
+  plt.show()
+
+  ## Propagation Statistics
+  # Create empty lists to store statistics variables, will be converted to a single Pandas dataframe
+  get_current_stats(ref_ref, labeled_cores)
+  # Get the time (index position) of netcdf file
+  # Pick a core (region), then get centroid position
+  # Output core statistics to dataframe and excel
+  # Calculate distance, speed, and azimuth angle between the 2 center pts at the start and end of 1 hr tracking window (See Part 7)
+  # Output the distance, speed, and azimuth 
 
   ## Animate the Plot
   def animate_contour(i):
@@ -308,8 +318,8 @@ def main():
     return text
     
   # Call animate function
-  ani = FuncAnimation(fig, animate_geometries, interval = 100, frames = len(ref_refs))
-  ani.save("./plots/20170217_18_polygon.gif", writer = PillowWriter(fps = 1))  
+  # ani = FuncAnimation(fig, animate_geometries, interval = 100, frames = len(ref_refs))
+  # ani.save("./plots/20170217_18_polygon.gif", writer = PillowWriter(fps = 1))  
 
 if __name__ == '__main__':
   main() 
