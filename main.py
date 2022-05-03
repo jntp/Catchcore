@@ -209,20 +209,21 @@ def main():
   plot_watershed_polygons(ax, sepulveda_polygon, whittier_polygon, santa_ana_polygon, san_diego_polygon)
   plot_intersections(ax, sepulveda_intersections, whittier_intersections, santa_ana_intersections, san_diego_intersections)
 
-  # Plot a single image (comment out if animating)
-  new_refs = new_reflectivity(ref_ref)
-  plot_single(ax, x, y, ref_cmap, ref_norm, new_refs, labeled_cores)
-
-  plt.show()
-
   ## Propagation Statistics
-  # Create empty lists to store statistics variables, will be converted to a single Pandas dataframe
-  get_current_stats(ref_ref, labeled_cores)
+  # Create empty lists to store statistics variables, will be converted to a single Pandas dataframe 
+  closest_centroid = get_closest_centroid(ref_ref, labeled_cores, (-117.698, 33.071), lats, lons)
+  print(closest_centroid)
   # Get the time (index position) of netcdf file
   # Pick a core (region), then get centroid position
   # Output core statistics to dataframe and excel
   # Calculate distance, speed, and azimuth angle between the 2 center pts at the start and end of 1 hr tracking window (See Part 7)
   # Output the distance, speed, and azimuth 
+
+  # Plot a single image (comment out if animating)
+  new_refs = new_reflectivity(ref_ref)
+  plot_single(ax, x, y, ref_cmap, ref_norm, new_refs, labeled_cores)
+
+  plt.show()
 
   ## Animate the Plot
   def animate_contour(i):
@@ -260,7 +261,7 @@ def main():
     mesh = ax.pcolormesh(x, y, new_refs, cmap = ref_cmap, norm = ref_norm, zorder = 2) 
 
     # Add text
-    date_string = year + "-" + month + "-" + day + " " + hour + ":" + minute + "Z"
+    date_string = year + "-" + month + "-" + day + " " + hour + ":" + minute + "Z" + " " + "ts=" + i
     text = ax.text(0.7, 0.02, date_string, transform = ax.transAxes, fontdict = {'size': 16})
 
     # Add colormesh and text as artists
@@ -309,7 +310,7 @@ def main():
     plot_intersections(ax, sepulveda_intersections, whittier_intersections, santa_ana_intersections, san_diego_intersections)
 
     # Add text
-    date_string = year + "-" + month + "-" + day + " " + hour + ":" + minute + "Z"
+    date_string = year + "-" + month + "-" + day + " " + hour + ":" + minute + "Z" + " " + "ts=" + i
     text = ax.text(0.7, 0.02, date_string, transform = ax.transAxes, fontdict = {'size': 16})
 
     # Add text as artists 
