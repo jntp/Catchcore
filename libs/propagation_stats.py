@@ -20,12 +20,15 @@ def convert_latlon(point, lats, lons):
 
 # Get the closest centroid based on a given point
 def get_closest_centroid(refs, labeled_cores, point, lats, lons):
+  # Create lists to find minimum value later
   centroids = []
   distances = []
 
+  # Get the labeled image and regions
   labeled_image, num_features = label(1 * (labeled_cores > 0), np.ones((3, 3)))
   regions = regionprops(labeled_image, intensity_image = refs)
 
+  # Obtain the distances between the point and each of the core's centroid
   for region in regions:
     # Convert to lat lon coordinates
     centroid = convert_latlon(region.centroid, lats, lons)
@@ -42,22 +45,10 @@ def get_closest_centroid(refs, labeled_cores, point, lats, lons):
 
   return closest_centroid
 
-def get_current_stats(refs, labeled_cores, lats, lons):
-  # Get stats of each region
-  # center_pt_lon
-  # center_pt_lat 
-  # time_index
-  labeled_image, num_features = label(1 * (labeled_cores > 0), np.ones((3, 3)))
-  regions = regionprops(labeled_image, intensity_image = refs)
-  for region in regions:
-    print(region.label)
-    print(region.centroid)
-    centroid_lonlat = convert_latlon(region.centroid, lats, lons)
-    print(centroid_lonlat)
+## Propagation Statistics Steps
 
-  print(refs.shape)
-
-def calculate_stats(centroid1, centroid2):
+# time_minutes is how much time has elapsed between beginning and end of tracking period
+def calculate_stats(centroid1, centroid2, time_minutes = 60):
   # Obtain individual latitude and longitude values from the centroids
   lon1, lat1 = centroid1
   lon2, lat2 = centroid2
@@ -66,14 +57,30 @@ def calculate_stats(centroid1, centroid2):
   geo = pyproj.Geod(ellps = 'WGS84')
 
   # Get the forward and backward azimuths plus distance (in m) via an inverse transformation
-  
+  fwd_azimuth, back_azimuth, distance_m = geo.inv(lon1, lat1, lon2, lat2)  
 
+  # Convert distance to km
+  distance_km = distance_m / 1000
 
+  # Convert input minutes to seconds for calculating speed in m/s 
+  time_seconds = time_minutes * 60
 
-# Find centroid with closest latitude and longitude coordinate 
+  # Calculate the speed in m/s
+  speed_m_s = distance_m / time_seconds
 
-# Next steps... use math.floor on row, col of each centroid
-# Use np.where to obtain lon, lat values... then store in list
+  return distance_km, fwd_azimuth, speed_m_s
+
+def get_max_ref(refs, labeled_cores):
+  # Create a list to find the maximum value later
+  max_ref = []
+
+  # Get the labeled image and regions
+  labeled_image, num_features = label(1 * (labeled_cores > 0), np.ones((3, 3)))
+  regions = regionprops(labeled_image, intensity_image = refs)
+
+  print(max(map(max, labeled_cores)))
+  # Get the reflectivities of the cores only, then find max
+
 # Get max reflectivity of each region
 
 # Make another function that calculates the average speed, max reflectivity, azimuth, etc.

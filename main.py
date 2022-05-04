@@ -136,7 +136,15 @@ def format_time(years_i, months_i, days_i, hours_i, minutes_i):
     minute = str(minute)
 
   return year, month, day, hour, minute
- 
+
+# Initialize the intersection and/or propagation statistics process
+def initiation(refs, ts, lons, lats):
+  ref_ref = refs[ts]
+  labeled_ncfr, labeled_cores = segmentation(ref_ref, ts)
+  shapely_contours = get_core_contours(labeled_cores, lons, lats)
+
+  return ref_ref, labeled_ncfr, labeled_cores, shapely_contours
+
 
 ## ** Main Function where everything happens **
 def main():
@@ -193,10 +201,7 @@ def main():
 
   ## Intersection - Find Intersections between cores and watershed; comment out if animating
   # Initiation
-  ts = 30 # timestep
-  ref_ref = ref_refs[ts] 
-  labeled_ncfr, labeled_cores = segmentation(ref_ref, ts)
-  shapely_contours = get_core_contours(labeled_cores, lons, lats)
+  ref_ref, labeled_ncfr, labeled_cores, shapely_contours = initiation(ref_refs, 42, lons, lats) 
 
   # Get polygon, intersections, proportion of intersection, and "cross" variable that indicates "true" intersection
   sepulveda_polygon, sepulveda_intersections, sepulveda_proportion, sepulveda_cross = intersection(shapely_contours, sepulveda)
@@ -210,20 +215,28 @@ def main():
   plot_intersections(ax, sepulveda_intersections, whittier_intersections, santa_ana_intersections, san_diego_intersections)
 
   ## Propagation Statistics
-  # Create empty lists to store statistics variables, will be converted to a single Pandas dataframe 
-  closest_centroid = get_closest_centroid(ref_ref, labeled_cores, (-117.698, 33.071), lats, lons)
-  print(closest_centroid)
-  # Get the time (index position) of netcdf file
-  # Pick a core (region), then get centroid position
-  # Output core statistics to dataframe and excel
-  # Calculate distance, speed, and azimuth angle between the 2 center pts at the start and end of 1 hr tracking window (See Part 7)
+  # Initiation of another timeframe for comparison
+  ref_ref0, labeled_ncfr0, labeled_cores0, shapely_contours0 = initiation(ref_refs, 30, lons, lats) 
+
+  # Manually track a core and obtain two points in different timeframes (spaced 12 timesteps or 1 hr apart)
+  # Points should be an estimation of the tracked core's centroid
+  # Then get the exact coordinates of the two centroids
+  centroid1 = get_closest_centroid(ref_ref0, labeled_cores0, (-117.698, 33.071), lats, lons)
+  centroid2 = get_closest_centroid(ref_ref, labeled_cores, (-117.233, 32.940), lats, lons)
+  
+  # Calculate the distance traveled, forward azimuth, and speed from the two coordinates
+  distance_km, fwd_azimuth, speed_m_s = calculate_stats(centroid1, centroid2)
+
+  # Maximum reflectivity
+  get_max_ref(ref_ref, labeled_cores)
+
   # Output the distance, speed, and azimuth 
 
   # Plot a single image (comment out if animating)
-  new_refs = new_reflectivity(ref_ref)
-  plot_single(ax, x, y, ref_cmap, ref_norm, new_refs, labeled_cores)
+  # new_refs = new_reflectivity(ref_ref)
+  # plot_single(ax, x, y, ref_cmap, ref_norm, new_refs, labeled_cores)
 
-  plt.show()
+  # plt.show()
 
   ## Animate the Plot
   def animate_contour(i):
