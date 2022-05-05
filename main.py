@@ -1,3 +1,4 @@
+import os
 import math 
 import geopandas as gpd
 import matplotlib
@@ -9,6 +10,7 @@ import cartopy.crs as ccrs
 import cartopy.feature as cfeature 
 from netCDF4 import Dataset
 import numpy as np
+import pandas as pd 
 import metpy.plots as mpplots 
 from libs.segmentation import *
 from libs.intersection import *
@@ -145,6 +147,24 @@ def initiation(refs, ts, lons, lats):
 
   return ref_ref, labeled_ncfr, labeled_cores, shapely_contours
 
+def out_to_csv(df, ref_year, ref_month, ref_day, timestep):
+  # Create a reference date for the file name 
+  ref_date = str(int(ref_year)) + str(int(ref_month)) + str(int(ref_day))
+
+  # Directory path
+  out_dir = "./outputs/" + ref_date
+
+  # Check if the directory exists; create new one if not
+  isdir = os.path.isdir(out_dir)
+  if not isdir:
+    os.mkdir(out_dir)
+
+  # Create output file path directory
+  out_file = out_dir + "/" + ref_date + "_" + str(timestep) + ".csv"
+
+  # Output dataframe to csv file 
+  df.to_csv(out_file)
+
 
 ## ** Main Function where everything happens **
 def main():
@@ -201,7 +221,8 @@ def main():
 
   ## Intersection - Find Intersections between cores and watershed; comment out if animating
   # Initiation
-  ref_ref, labeled_ncfr, labeled_cores, shapely_contours = initiation(ref_refs, 42, lons, lats) 
+  ts = 42
+  ref_ref, labeled_ncfr, labeled_cores, shapely_contours = initiation(ref_refs, ts, lons, lats) 
 
   # Get polygon, intersections, proportion of intersection, and "cross" variable that indicates "true" intersection
   sepulveda_polygon, sepulveda_intersections, sepulveda_proportion, sepulveda_cross = intersection(shapely_contours, sepulveda)
@@ -227,10 +248,92 @@ def main():
   # Calculate the distance traveled, forward azimuth, and speed from the two coordinates
   distance_km, fwd_azimuth, speed_m_s = calculate_stats(centroid1, centroid2)
 
-  # Maximum reflectivity
-  get_max_ref(ref_ref, labeled_cores)
+  ## Maximum reflectivity
+  # Get the maximum reflectivity
+  max_ref = get_max_ref(ref_ref, labeled_cores)
 
-  # Output the distance, speed, and azimuth 
+  ## Save the Statistics
+  # Create empty lists to store stat variables; don't comment this one out!
+  sepulveda_prop = []
+  sepulveda_crossing = []
+  whittier_prop = []
+  whittier_crossing = []
+  santa_ana_prop = []
+  santa_ana_crossing = []
+  san_diego_prop = []
+  san_diego_crossing = []
+  max_reflectivity = []
+  timestep = []
+
+  # Append stat variables to lists
+  sepulveda_prop.append(sepulveda_proportion)
+  sepulveda_crossing.append(sepulveda_cross)
+  whittier_prop.append(whittier_proportion) 
+  whittier_crossing.append(whittier_cross)
+  santa_ana_prop.append(santa_ana_proportion)
+  santa_ana_crossing.append(santa_ana_cross)
+  san_diego_prop.append(san_diego_proportion)
+  san_diego_crossing.append(san_diego_cross)
+  max_reflectivity.append(max_ref)
+  timestep.append(ts)
+
+  # Format time variables and convert to string
+  year, month, day, hour, minute = format_time(years[ts], months[ts], days[ts], hours[ts], minutes[ts])  
+
+  # Create/concatenate a date and time variable
+  date = year + "-" + month + "-" + day
+  time = hour + ":" + minute
+
+  # Create dataframe from list and then convert it to csv file
+  df = pd.DataFrame({'Date': date, \
+      'Time (Z)': time, \
+      'Sepulveda Proportion': sepulveda_prop, \
+      'Sepulveda Crossing': sepulveda_crossing, \
+      'Whittier Proportion': whittier_prop, \
+      'Whittier Crossing': whittier_crossing, \
+      'Santa Ana Proportion': santa_ana_prop, \
+      'Santa Ana Crossing': santa_ana_crossing, \
+      'San Diego Proportion': san_diego_prop, \
+      'San Diego Crossing': san_diego_crossing, \
+      'Maximum Reflectivity (dbZ)': max_reflectivity, \
+      'Time Step Index': timestep})
+
+  ## Output the statistics to csv file (single timestep; comment out if doing multiple timesteps)
+  out_to_csv(df, years[0], months[0], days[0], ts)
+
+  ## Output the statistics to csv file (for multiple timesteps)
+  def run_multiple(i):
+    # Run segmentation algorithm for specific time frame 
+    labeled_ncfr, labeled_cores = segmentation(ref_refs[i], i)
+
+    # Obtain shapely geometric contours of the labeled cores
+    shapely_contours = get_core_contours(labeled_cores, lons, lats)
+
+    ## Obtain polygons and intersections
+    # Get polygon, intersections, proportion of intersection, and "cross" variable that indicates "true" intersection
+    sepulveda_polygon, sepulveda_intersections, sepulveda_proportion, sepulveda_cross = intersection(shapely_contours, sepulveda)
+    whittier_polygon, whittier_intersections, whittier_proportion, whittier_cross = intersection(shapely_contours, whittier)
+    santa_ana_polygon, santa_ana_intersections, santa_ana_proportion, santa_ana_cross = intersection(shapely_contours, santa_ana)
+    san_diego_polygon, san_diego_intersections, san_diego_proportion, san_diego_cross = intersection(shapely_contours, san_diego, 1)
+
+    ## Maximum reflectivity
+    # Get the maximum reflectivity
+    max_ref = get_max_ref(ref_ref, labeled_cores)
+ 
+    # Format time variables and convert to string
+    year, month, day, hour, minute = format_time(years[i], months[i], days[i], hours[i], minutes[i]) 
+
+    # Append stat variables to lists
+
+    # Create/concatenate a date and time variable
+    date = year + "-" + month + "-" + day
+    time = hour + ":" + minute
+
+    # Create dataframe from list and then convert it to csv file
+
+    # Output the statistics to csv file
+
+
 
   # Plot a single image (comment out if animating)
   # new_refs = new_reflectivity(ref_ref)
@@ -325,9 +428,6 @@ def main():
     # Add text
     date_string = year + "-" + month + "-" + day + " " + hour + ":" + minute + "Z" + " " + "ts=" + i
     text = ax.text(0.7, 0.02, date_string, transform = ax.transAxes, fontdict = {'size': 16})
-
-    # Add text as artists 
-    # ax.add_artist(text)
 
     return text
     

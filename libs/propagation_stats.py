@@ -71,17 +71,17 @@ def calculate_stats(centroid1, centroid2, time_minutes = 60):
   return distance_km, fwd_azimuth, speed_m_s
 
 def get_max_ref(refs, labeled_cores):
-  # Create a list to find the maximum value later
-  max_ref = []
+  # Get the indices where the cores exist
+  cores_i, cores_j = np.where(labeled_cores > 0)
 
-  # Get the labeled image and regions
-  labeled_image, num_features = label(1 * (labeled_cores > 0), np.ones((3, 3)))
-  regions = regionprops(labeled_image, intensity_image = refs)
+  # Extract the reflectivity values
+  ref_cores = refs[cores_i, cores_j]
 
-  print(max(map(max, labeled_cores)))
-  # Get the reflectivities of the cores only, then find max
+  # Obtain the maximum value
+  max_ref = max(ref_cores)
 
-# Get max reflectivity of each region
+  return max_ref
+
 
 # Make another function that calculates the average speed, max reflectivity, azimuth, etc.
 
