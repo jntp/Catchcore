@@ -219,41 +219,48 @@ def main():
   x = out_xyz[:, :, 0] 
   y = out_xyz[:, :, 1]
 
-  ## Intersection - Find Intersections between cores and watershed; comment out if animating
-  # Initiation
-  ts = 42
-  ref_ref, labeled_ncfr, labeled_cores, shapely_contours = initiation(ref_refs, ts, lons, lats) 
+  "---------------Below is the code for running steps separately---------------"
 
+  ## Segmentation - Delineate the NCFR cores; comment out if animating
+  # Initiation
+  # ts = 42
+  # ref_ref, labeled_ncfr, labeled_cores, shapely_contours = initiation(ref_refs, ts, lons, lats) 
+
+  ## Intersection - Find Intersections between cores and watershed; comment out if animating
   # Get polygon, intersections, proportion of intersection, and "cross" variable that indicates "true" intersection
-  sepulveda_polygon, sepulveda_intersections, sepulveda_proportion, sepulveda_cross = intersection(shapely_contours, sepulveda)
-  whittier_polygon, whittier_intersections, whittier_proportion, whittier_cross = intersection(shapely_contours, whittier)
-  santa_ana_polygon, santa_ana_intersections, santa_ana_proportion, santa_ana_cross = intersection(shapely_contours, santa_ana)
-  san_diego_polygon, san_diego_intersections, san_diego_proportion, san_diego_cross = intersection(shapely_contours, san_diego, 1)
+  # sepulveda_polygon, sepulveda_intersections, sepulveda_proportion, sepulveda_cross = intersection(shapely_contours, sepulveda)
+  # whittier_polygon, whittier_intersections, whittier_proportion, whittier_cross = intersection(shapely_contours, whittier)
+  # santa_ana_polygon, santa_ana_intersections, santa_ana_proportion, santa_ana_cross = intersection(shapely_contours, santa_ana)
+  # san_diego_polygon, san_diego_intersections, san_diego_proportion, san_diego_cross = intersection(shapely_contours, san_diego, 1)
 
   # Plot the shapely geometries and intersections
   # ax.add_geometries(shapely_contours, crs = ccrs.PlateCarree(), zorder = 2, facecolor = 'green', edgecolor = 'green')
-  plot_watershed_polygons(ax, sepulveda_polygon, whittier_polygon, santa_ana_polygon, san_diego_polygon)
-  plot_intersections(ax, sepulveda_intersections, whittier_intersections, santa_ana_intersections, san_diego_intersections)
+  # plot_watershed_polygons(ax, sepulveda_polygon, whittier_polygon, santa_ana_polygon, san_diego_polygon)
+  # plot_intersections(ax, sepulveda_intersections, whittier_intersections, santa_ana_intersections, san_diego_intersections)
 
   ## Propagation Statistics
   # Initiation of another timeframe for comparison
-  ref_ref0, labeled_ncfr0, labeled_cores0, shapely_contours0 = initiation(ref_refs, 30, lons, lats) 
+  # ref_ref0, labeled_ncfr0, labeled_cores0, shapely_contours0 = initiation(ref_refs, 30, lons, lats) 
 
   # Manually track a core and obtain two points in different timeframes (spaced 12 timesteps or 1 hr apart)
   # Points should be an estimation of the tracked core's centroid
   # Then get the exact coordinates of the two centroids
-  centroid1 = get_closest_centroid(ref_ref0, labeled_cores0, (-117.698, 33.071), lats, lons)
-  centroid2 = get_closest_centroid(ref_ref, labeled_cores, (-117.233, 32.940), lats, lons)
+  # centroid1 = get_closest_centroid(ref_ref0, labeled_cores0, (-117.698, 33.071), lats, lons)
+  # centroid2 = get_closest_centroid(ref_ref, labeled_cores, (-117.233, 32.940), lats, lons)
   
   # Calculate the distance traveled, forward azimuth, and speed from the two coordinates
-  distance_km, fwd_azimuth, speed_m_s = calculate_stats(centroid1, centroid2)
+  # distance_km, fwd_azimuth, speed_m_s = calculate_stats(centroid1, centroid2)
 
   ## Maximum reflectivity
   # Get the maximum reflectivity
-  max_ref = get_max_ref(ref_ref, labeled_cores)
+  # max_ref = get_max_ref(ref_ref, labeled_cores)
+
+  "---------------Below is running everything altogether---------------"
 
   ## Save the Statistics
   # Create empty lists to store stat variables; don't comment this one out!
+  date = []
+  time = []
   sepulveda_prop = []
   sepulveda_crossing = []
   whittier_prop = []
@@ -265,49 +272,10 @@ def main():
   max_reflectivity = []
   timestep = []
 
-  # Append stat variables to lists
-  sepulveda_prop.append(sepulveda_proportion)
-  sepulveda_crossing.append(sepulveda_cross)
-  whittier_prop.append(whittier_proportion) 
-  whittier_crossing.append(whittier_cross)
-  santa_ana_prop.append(santa_ana_proportion)
-  santa_ana_crossing.append(santa_ana_cross)
-  san_diego_prop.append(san_diego_proportion)
-  san_diego_crossing.append(san_diego_cross)
-  max_reflectivity.append(max_ref)
-  timestep.append(ts)
-
-  # Format time variables and convert to string
-  year, month, day, hour, minute = format_time(years[ts], months[ts], days[ts], hours[ts], minutes[ts])  
-
-  # Create/concatenate a date and time variable
-  date = year + "-" + month + "-" + day
-  time = hour + ":" + minute
-
-  # Create dataframe from list and then convert it to csv file
-  df = pd.DataFrame({'Date': date, \
-      'Time (Z)': time, \
-      'Sepulveda Proportion': sepulveda_prop, \
-      'Sepulveda Crossing': sepulveda_crossing, \
-      'Whittier Proportion': whittier_prop, \
-      'Whittier Crossing': whittier_crossing, \
-      'Santa Ana Proportion': santa_ana_prop, \
-      'Santa Ana Crossing': santa_ana_crossing, \
-      'San Diego Proportion': san_diego_prop, \
-      'San Diego Crossing': san_diego_crossing, \
-      'Maximum Reflectivity (dbZ)': max_reflectivity, \
-      'Time Step Index': timestep})
-
-  ## Output the statistics to csv file (single timestep; comment out if doing multiple timesteps)
-  out_to_csv(df, years[0], months[0], days[0], ts)
-
-  ## Output the statistics to csv file (for multiple timesteps)
-  def run_multiple(i):
-    # Run segmentation algorithm for specific time frame 
-    labeled_ncfr, labeled_cores = segmentation(ref_refs[i], i)
-
-    # Obtain shapely geometric contours of the labeled cores
-    shapely_contours = get_core_contours(labeled_cores, lons, lats)
+  ## Output the statistics to csv file
+  def run_output_stats(i):
+    ## Initiate and run segmentation algorithm for specific time frame 
+    ref_ref, labeled_ncfr, labeled_cores, shapely_contours = initiation(ref_refs, i, lons, lats) 
 
     ## Obtain polygons and intersections
     # Get polygon, intersections, proportion of intersection, and "cross" variable that indicates "true" intersection
@@ -323,19 +291,56 @@ def main():
     # Format time variables and convert to string
     year, month, day, hour, minute = format_time(years[i], months[i], days[i], hours[i], minutes[i]) 
 
-    # Append stat variables to lists
-
     # Create/concatenate a date and time variable
-    date = year + "-" + month + "-" + day
-    time = hour + ":" + minute
+    date_str = year + "-" + month + "-" + day
+    time_str = hour + ":" + minute
 
+    # Append stat variables to lists
+    date.append(date_str)
+    time.append(time_str) 
+    sepulveda_prop.append(sepulveda_proportion)
+    sepulveda_crossing.append(sepulveda_cross)
+    whittier_prop.append(whittier_proportion) 
+    whittier_crossing.append(whittier_cross)
+    santa_ana_prop.append(santa_ana_proportion)
+    santa_ana_crossing.append(santa_ana_cross)
+    san_diego_prop.append(san_diego_proportion)
+    san_diego_crossing.append(san_diego_cross)
+    max_reflectivity.append(max_ref)
+    timestep.append(i)
+ 
     # Create dataframe from list and then convert it to csv file
+    df = pd.DataFrame({'Date': date, \
+      'Time (Z)': time, \
+      'Sepulveda Proportion': sepulveda_prop, \
+      'Sepulveda Crossing': sepulveda_crossing, \
+      'Whittier Proportion': whittier_prop, \
+      'Whittier Crossing': whittier_crossing, \
+      'Santa Ana Proportion': santa_ana_prop, \
+      'Santa Ana Crossing': santa_ana_crossing, \
+      'San Diego Proportion': san_diego_prop, \
+      'San Diego Crossing': san_diego_crossing, \
+      'Maximum Reflectivity (dbZ)': max_reflectivity, \
+      'Time Step Index': timestep})
 
     # Output the statistics to csv file
+    out_to_csv(df, years[0], months[0], days[0], i)
 
+  ## Run the run_output_stats function
+  # Define and starting and ending timestep
+  start_ts = 30
+  end_ts = 33
 
+  # Check whether to run the function once or multiple times
+  if start_ts == end_ts:
+    run_output_stats(start_ts) # run the function once
+  else:
+    for i in range(start_ts, end_ts + 1): # add 1 to end_ts to ensure iteration ends where user specifies
+      run_output_stats(i)
+  
+  "---------------Below is the Code for Plotting---------------"
 
-  # Plot a single image (comment out if animating)
+  ## Plot a single image (comment out if animating)
   # new_refs = new_reflectivity(ref_ref)
   # plot_single(ax, x, y, ref_cmap, ref_norm, new_refs, labeled_cores)
 
@@ -440,5 +445,4 @@ if __name__ == '__main__':
 
 # Next Steps
 # Test for proportion threshold (NCFR intersection/watershed) of each watershed
-# Write to xls file, check for intersection twice? 
-# Get maximum reflectivity
+# Make similar to run_out_statistics function for the propagation stats
