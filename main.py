@@ -65,20 +65,20 @@ def segmentation(refs, i = 0, core_buffer = 30, conv_buffer = 3):
   # Step 5 - Connect cells within a certain search radius
   # Step 6 - Check if the length of connected cells fail to meet NCFR criteria, remove
   # Step 7 - Extract NCFR cores from labeled NCFR given convective criteria
-  conv_cells = find_convective_cells(refs) 
+  conv_cells = find_convective_cells(refs, 35) 
   closed_cells = close_holes(conv_cells, conv_buffer)
   narrow_conv_cells = remove_wide_cells(refs, closed_cells)
   narrow_conv_cells2 = remove_adjacent_cells(refs, narrow_conv_cells)
   merged_cells = connect_cells(narrow_conv_cells2, core_buffer) 
   labeled_ncfr = check_axis(refs, merged_cells)  
-  labeled_cores = extract_cores(refs, labeled_ncfr, conv_buffer)
+  labeled_cores = extract_cores(refs, labeled_ncfr, conv_buffer, 35)
 
   # Check if the algorithm returns nothing and that the timestep is later in the animation
   if not any(map(any, labeled_cores)) and i >= 40:
     # Run segmentation procedure again but stop at Step 4 and remove small cells
-    conv_cells = find_convective_cells(refs)
+    conv_cells = find_convective_cells(refs, 35)
     closed_cells = close_holes(conv_cells, conv_buffer)
-    narrow_conv_cells = remove_wide_cells(refs, closed_cells, 120) # increase width of cells
+    narrow_conv_cells = remove_wide_cells(refs, closed_cells) # increase width of cells
     narrow_conv_cells2 = remove_adjacent_cells(refs, narrow_conv_cells) 
     labeled_cores = remove_small_cells(refs, narrow_conv_cells2)
 
@@ -179,7 +179,8 @@ def main():
   san_diego = gpd.read_file("SD_R_A_Fashion_Valley.geojson") 
 
   # Load NEXRAD data from netcdf4 file
-  ncfile = '/media/jntp/D2BC15A1BC1580E1/NCFRs/20170217_18.nc'
+  date_fp = "19961030" 
+  ncfile = '/media/jntp/D2BC15A1BC1580E1/NCFRs/' + date_fp + '.nc'
   nexdata = Dataset(ncfile, mode = 'r')
   print(nexdata)
 
@@ -355,8 +356,8 @@ def main():
   speeds_m_s = []
 
   # Specify a starting and ending timestep (normally should be spaced 12 timesteps apart or a 1 hour period)
-  ts_beg = 30
-  ts_end = 42 # this is the last timestep; no need to "add 1"
+  # ts_beg = 30
+  # ts_end = 42 # this is the last timestep; no need to "add 1"
 
   # NCFR Propagation Statistics - run the steps for calculating the statistics
   def run_stats(coord0, coord1):
@@ -399,17 +400,17 @@ def main():
     out_to_csv(df, years[0], months[0], days[0], ts_beg, 1) # code = 1 for NCFR Propagation Statistics
 
   # Specify two coordinates (tuples) that our estimation of the tracked core's centroid over time
-  coord0 = (-117.698, 33.071)
-  coord1 = (-117.233, 32.940) 
+  # coord0 = (-117.698, 33.071)
+  # coord1 = (-117.233, 32.940) 
 
   # Call the run_stats function using coord0 and coord1
-  run_stats(coord0, coord1)
+  # run_stats(coord0, coord1)
 
   "---------------Below is the Code for Plotting---------------"
 
   ## Plot a single image (comment out if animating)
-  new_refs = new_reflectivity(ref_ref)
-  plot_single(ax, x, y, ref_cmap, ref_norm, new_refs, labeled_cores)
+  # new_refs = new_reflectivity(ref_ref)
+  # plot_single(ax, x, y, ref_cmap, ref_norm, new_refs, labeled_cores)
 
   # plt.show()
 
@@ -449,7 +450,7 @@ def main():
     mesh = ax.pcolormesh(x, y, new_refs, cmap = ref_cmap, norm = ref_norm, zorder = 2) 
 
     # Add text
-    date_string = year + "-" + month + "-" + day + " " + hour + ":" + minute + "Z" + " " + "ts=" + i
+    date_string = year + "-" + month + "-" + day + " " + hour + ":" + minute + "Z" + " " + "ts=" + str(i)
     text = ax.text(0.7, 0.02, date_string, transform = ax.transAxes, fontdict = {'size': 16})
 
     # Add colormesh and text as artists
@@ -498,14 +499,19 @@ def main():
     plot_intersections(ax, sepulveda_intersections, whittier_intersections, santa_ana_intersections, san_diego_intersections)
 
     # Add text
-    date_string = year + "-" + month + "-" + day + " " + hour + ":" + minute + "Z" + " " + "ts=" + i
+    date_string = year + "-" + month + "-" + day + " " + hour + ":" + minute + "Z" + " " + "ts=" + str(i)
     text = ax.text(0.7, 0.02, date_string, transform = ax.transAxes, fontdict = {'size': 16})
 
     return text
     
-  # Call animate function
-  ani = FuncAnimation(fig, animate_geometries, interval = 100, frames = len(ref_refs))
-  ani.save("./plots/20170217_18_polygon.gif", writer = PillowWriter(fps = 1))  
+  # Call animate functions
+  # out_fp1 = "./plots/" + date_fp + ".gif" 
+  # ani1 = FuncAnimation(fig, animate_contour, interval = 100, frames = len(ref_refs))
+  # ani1.save(out_fp1, writer = PillowWriter(fps = 1))
+
+  out_fp2 = "./plots/" + date_fp + "_polygon.gif"
+  ani2 = FuncAnimation(fig, animate_geometries, interval = 100, frames = len(ref_refs))
+  ani2.save(out_fp2, writer = PillowWriter(fps = 1))
 
 if __name__ == '__main__':
   main() 
