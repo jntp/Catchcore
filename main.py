@@ -84,18 +84,18 @@ def segmentation(refs, i = 0, core_buffer = 30, conv_buffer = 3):
 
   return labeled_ncfr, labeled_cores
 
-def intersection(shapely_cores, watershed, code = 0):
+def intersection(shapely_cores, watershed, threshold = 0.03, code = 0):
   if code == 0:
     watershed_boundary = watershed.geometry[1].boundary 
     watershed_polygon, watershed_intersections = find_intersection(shapely_cores, watershed_boundary)
-    watershed_proportion, watershed_cross = check_area_intersections(watershed_intersections, watershed_polygon)
+    watershed_proportion, watershed_cross = check_area_intersections(watershed_intersections, watershed_polygon, threshold)
 
     return watershed_polygon, watershed_intersections, watershed_proportion, watershed_cross
   elif code == 1:
     watershed_boundary = watershed.geometry[1].boundary 
     water_polygon, watershed_intersections = find_intersection(shapely_cores, watershed_boundary, 1)
     watershed_polygon = gpd.GeoSeries(water_polygon) # turn water_polygon into geoseries since it is currently 1 polygon and not iterable
-    watershed_proportion, watershed_cross = check_area_intersections(watershed_intersections, water_polygon)
+    watershed_proportion, watershed_cross = check_area_intersections(watershed_intersections, water_polygon, threshold)
 
     return watershed_polygon, watershed_intersections, watershed_proportion, watershed_cross
 
@@ -147,7 +147,8 @@ def initiation(refs, ts, lons, lats):
 
   return ref_ref, labeled_ncfr, labeled_cores, shapely_contours
 
-def out_to_csv(df, ref_year, ref_month, ref_day, timestep):
+# Code 0 for default output, code 1 for NCFR propagation statistics
+def out_to_csv(df, ref_year, ref_month, ref_day, timestep, code = 0):
   # Create a reference date for the file name 
   ref_date = str(int(ref_year)) + str(int(ref_month)) + str(int(ref_day))
 
@@ -160,7 +161,10 @@ def out_to_csv(df, ref_year, ref_month, ref_day, timestep):
     os.mkdir(out_dir)
 
   # Create output file path directory
-  out_file = out_dir + "/" + ref_date + "_" + str(timestep) + ".csv"
+  if code == 0:
+    out_file = out_dir + "/" + ref_date + "_" + str(timestep) + ".csv"
+  elif code == 1:
+    out_file = out_dir + "/" + ref_date + "_" + "Propagation_Stats.csv"
 
   # Output dataframe to csv file 
   df.to_csv(out_file)
@@ -228,10 +232,10 @@ def main():
 
   ## Intersection - Find Intersections between cores and watershed; comment out if animating
   # Get polygon, intersections, proportion of intersection, and "cross" variable that indicates "true" intersection
-  # sepulveda_polygon, sepulveda_intersections, sepulveda_proportion, sepulveda_cross = intersection(shapely_contours, sepulveda)
-  # whittier_polygon, whittier_intersections, whittier_proportion, whittier_cross = intersection(shapely_contours, whittier)
+  # sepulveda_polygon, sepulveda_intersections, sepulveda_proportion, sepulveda_cross = intersection(shapely_contours, sepulveda, 0.08)
+  # whittier_polygon, whittier_intersections, whittier_proportion, whittier_cross = intersection(shapely_contours, whittier, 0.1)
   # santa_ana_polygon, santa_ana_intersections, santa_ana_proportion, santa_ana_cross = intersection(shapely_contours, santa_ana)
-  # san_diego_polygon, san_diego_intersections, san_diego_proportion, san_diego_cross = intersection(shapely_contours, san_diego, 1)
+  # san_diego_polygon, san_diego_intersections, san_diego_proportion, san_diego_cross = intersection(shapely_contours, san_diego, 0.02, 1)
 
   # Plot the shapely geometries and intersections
   # ax.add_geometries(shapely_contours, crs = ccrs.PlateCarree(), zorder = 2, facecolor = 'green', edgecolor = 'green')
@@ -271,7 +275,7 @@ def main():
   san_diego_crossing = []
   max_reflectivity = []
   timestep = []
-
+ 
   ## Output the statistics to csv file
   def run_output_stats(i):
     ## Initiate and run segmentation algorithm for specific time frame 
@@ -279,10 +283,10 @@ def main():
 
     ## Obtain polygons and intersections
     # Get polygon, intersections, proportion of intersection, and "cross" variable that indicates "true" intersection
-    sepulveda_polygon, sepulveda_intersections, sepulveda_proportion, sepulveda_cross = intersection(shapely_contours, sepulveda)
-    whittier_polygon, whittier_intersections, whittier_proportion, whittier_cross = intersection(shapely_contours, whittier)
+    sepulveda_polygon, sepulveda_intersections, sepulveda_proportion, sepulveda_cross = intersection(shapely_contours, sepulveda, 0.08)
+    whittier_polygon, whittier_intersections, whittier_proportion, whittier_cross = intersection(shapely_contours, whittier, 0.1)
     santa_ana_polygon, santa_ana_intersections, santa_ana_proportion, santa_ana_cross = intersection(shapely_contours, santa_ana)
-    san_diego_polygon, san_diego_intersections, san_diego_proportion, san_diego_cross = intersection(shapely_contours, san_diego, 1)
+    san_diego_polygon, san_diego_intersections, san_diego_proportion, san_diego_cross = intersection(shapely_contours, san_diego, 0.02, 1)
 
     ## Maximum reflectivity
     # Get the maximum reflectivity
@@ -328,21 +332,84 @@ def main():
 
   ## Run the run_output_stats function
   # Define and starting and ending timestep
-  start_ts = 30
-  end_ts = 33
+  start_ts = 0
+  end_ts = 60
 
   # Check whether to run the function once or multiple times
   if start_ts == end_ts:
     run_output_stats(start_ts) # run the function once
   else:
-    for i in range(start_ts, end_ts + 1): # add 1 to end_ts to ensure iteration ends where user specifies
+    for i in range(start_ts, end_ts):
       run_output_stats(i)
+
+  "--------------Below is the code for outputting NCFR Propagation Statistics---------------"
+
+  ## Output NCFR Propagation Stats to csv file
+  # Create another group of empty lists to store the NCFR Propagation Stats (storm speed, azimuth, direction)
+  start_timestep = []
+  start_centroid = []
+  end_timestep = []
+  end_centroid = []
+  distances_km = []
+  fwd_azimuths = []
+  speeds_m_s = []
+
+  # Specify a starting and ending timestep (normally should be spaced 12 timesteps apart or a 1 hour period)
+  ts_beg = 30
+  ts_end = 42 # this is the last timestep; no need to "add 1"
+
+  # NCFR Propagation Statistics - run the steps for calculating the statistics
+  def run_stats(coord0, coord1):
+    """
+      Parameters:
+      coord0, coord1 - tuple in the form of (lon, lat), user estimated coordinates of a tracked core's centroid
+    """
+    # Initiate the segmetation process
+    ref_ref0, labeled_ncfr0, labeled_cores0, shapely_contours0 = initiation(ref_refs, ts_beg, lons, lats)
+    ref_ref1, labeled_ncfr1, labeled_cores1, shapely_contours1 = initiation(ref_refs, ts_end, lons, lats)
+
+    # Manually track a core and obtain two points in different timeframes (spaced 12 timesteps or 1 hr apart)
+    # Points should be an estimation of the tracked core's centroid
+    # Then get the exact coordinates of the two centroids
+    centroid0 = get_closest_centroid(ref_ref0, labeled_cores0, coord0, lats, lons)
+    centroid1 = get_closest_centroid(ref_ref1, labeled_cores1, coord1, lats, lons)
   
+    # Calculate the distance traveled, forward azimuth, and speed from the two coordinates
+    distance_km, fwd_azimuth, speed_m_s = calculate_stats(centroid0, centroid1)
+
+    # Append to lists
+    start_timestep.append(ts_beg)
+    start_centroid.append(centroid0)
+    end_timestep.append(ts_end)
+    end_centroid.append(centroid1) 
+    distances_km.append(distance_km)
+    fwd_azimuths.append(fwd_azimuth)
+    speeds_m_s.append(speed_m_s)
+
+    # Create dataframe from list and then convert it to csv file
+    df = pd.DataFrame({'Starting Timestep': start_timestep, \
+        'Centroid Start Position': start_centroid, \
+        'Ending Timestep': end_timestep, \
+        'Centroid End Position': end_centroid, \
+        'Distance (km)': distances_km, \
+        'Azimuth (deg)': fwd_azimuth, \
+        'Speed (m/s)': speed_m_s})
+
+    # Output Propagation Statistics to csv file
+    out_to_csv(df, years[0], months[0], days[0], ts_beg, 1) # code = 1 for NCFR Propagation Statistics
+
+  # Specify two coordinates (tuples) that our estimation of the tracked core's centroid over time
+  coord0 = (-117.698, 33.071)
+  coord1 = (-117.233, 32.940) 
+
+  # Call the run_stats function using coord0 and coord1
+  run_stats(coord0, coord1)
+
   "---------------Below is the Code for Plotting---------------"
 
   ## Plot a single image (comment out if animating)
-  # new_refs = new_reflectivity(ref_ref)
-  # plot_single(ax, x, y, ref_cmap, ref_norm, new_refs, labeled_cores)
+  new_refs = new_reflectivity(ref_ref)
+  plot_single(ax, x, y, ref_cmap, ref_norm, new_refs, labeled_cores)
 
   # plt.show()
 
@@ -419,10 +486,10 @@ def main():
 
     ## Obtain polygons and intersections
     # Get polygon, intersections, proportion of intersection, and "cross" variable that indicates "true" intersection
-    sepulveda_polygon, sepulveda_intersections, sepulveda_proportion, sepulveda_cross = intersection(shapely_contours, sepulveda)
-    whittier_polygon, whittier_intersections, whittier_proportion, whittier_cross = intersection(shapely_contours, whittier)
+    sepulveda_polygon, sepulveda_intersections, sepulveda_proportion, sepulveda_cross = intersection(shapely_contours, sepulveda, 0.08)
+    whittier_polygon, whittier_intersections, whittier_proportion, whittier_cross = intersection(shapely_contours, whittier, 0.1)
     santa_ana_polygon, santa_ana_intersections, santa_ana_proportion, santa_ana_cross = intersection(shapely_contours, santa_ana)
-    san_diego_polygon, san_diego_intersections, san_diego_proportion, san_diego_cross = intersection(shapely_contours, san_diego, 1)
+    san_diego_polygon, san_diego_intersections, san_diego_proportion, san_diego_cross = intersection(shapely_contours, san_diego, 0.02, 1)
 
     ## Plot cores, polygons, intersections, and text
     # Plot the shapely geometries and intersections
@@ -437,12 +504,9 @@ def main():
     return text
     
   # Call animate function
-  # ani = FuncAnimation(fig, animate_geometries, interval = 100, frames = len(ref_refs))
-  # ani.save("./plots/20170217_18_polygon.gif", writer = PillowWriter(fps = 1))  
+  ani = FuncAnimation(fig, animate_geometries, interval = 100, frames = len(ref_refs))
+  ani.save("./plots/20170217_18_polygon.gif", writer = PillowWriter(fps = 1))  
 
 if __name__ == '__main__':
   main() 
 
-# Next Steps
-# Test for proportion threshold (NCFR intersection/watershed) of each watershed
-# Make similar to run_out_statistics function for the propagation stats

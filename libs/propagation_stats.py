@@ -78,10 +78,11 @@ def get_max_ref(refs, labeled_cores):
   ref_cores = refs[cores_i, cores_j]
 
   # Obtain the maximum value
-  max_ref = max(ref_cores)
+  try: 
+    max_ref = max(ref_cores)
+  except: # if error occurs, assume no cores were detected
+    max_ref = 0 # set maximum reflectivity to 0
 
   return max_ref
 
-
 # Make another function that calculates the average speed, max reflectivity, azimuth, etc.
-

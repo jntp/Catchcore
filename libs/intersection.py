@@ -70,7 +70,7 @@ def find_intersection(polygon_cores, watershed_boundary, code = 0):
 
   return watershed_polygon, intersections
 
-def check_area_intersections(intersections, watershed_polygon, threshold = 0.05):
+def check_area_intersections(intersections, watershed_polygon, threshold = 0.03):
   proportions = intersections.area / watershed_polygon.area
   is_sufficient = False
 
