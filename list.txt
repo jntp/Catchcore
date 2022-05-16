@@ -1,4 +1,78 @@
 19961030 - Good
-19970112_13
-19971126
+19970112_13 - Good
+19971126 - Good
 19980203 - Good, Needs contour animation
+19980206 - Seems to work? Needs contour animation
+19980219_20 - ??? Needs contour animation
+19980325 - Good, Needs contour animation
+19980512 - ??? Needs contour animation
+19981128 - ??? Needs contour animation
+19990131 - Good (not perfect)
+19990315 - Good? Needs contour animation
+19990325 - Good, needs contour animation
+20000221 - Checked, use manual
+20000223_24 - Good, needs contour animation
+20000305 - Good, needs contour animation
+20010111 - Checked, use manual
+20010306 - Good, needs contour animation
+20011112_13 - Good
+20021220 - Good, needs contour animation
+20021228_29 - *Check in progress* 
+20030414_15 - ??? Needs contour animation
+20031226 
+20040203 - Good, needs contour animation
+20041020 - ??? Needs contour animation
+20041027 - Good, needs contour animation
+20041228 - Good, needs contour animation
+20041229 - Good, needs contour animation
+20050221 - Good, needs contour animation
+20050428 - Good, needs contour animation
+20051109
+20060102
+20060303
+20060321 - ??? Needs contour animation
+20060405
+20060521_22
+20061210
+20070222
+20070420 - Good, needs contour animation
+20080124 - ??? Needs contour animation
+20081225_26
+20090213
+20090216 - Good, needs contour animation
+20091207_08
+20091213
+20100118_19 - Good, needs contour animation
+20100119_20 - Good, needs contour animation
+20100120_21 - Good, needs contour animation
+20100412 - Good? Needs contour animation
+20101121
+20110226 - Good, needs contour animation
+20110320_21 - Good, needs contour animation
+20111106
+20111120_21 - Good, needs contour animation
+20120317
+20120325_26 - Good, needs contour animation
+20120413_14 - Good, needs contour animation
+20121213 - ??? Needs contour animation
+20130308 - Good? Needs contour animation
+20140228_0301 - Good, needs contour animation
+20141212 - Good, needs contour animation
+20160131_0201
+20160307 - Good, needs contour animation
+20160311_12 - Good? Needs contour animation
+20170120
+20170217_18 - Good
+20180109
+20190106 - ??? Needs contour animation
+20190112 - ??? Needs contour animation
+20190114 - ??? Needs contour animation
+20190131
+20190202_03 - Good, needs contour animation
+20190204
+20191127
+20191128 - Good, needs contour animation 
+20191223 - Good, needs contour animation
+20191226 - Good? Needs contour animation
+20200316_17
+20200323

@@ -68,13 +68,13 @@ def segmentation(refs, i = 0, core_buffer = 30, conv_buffer = 3):
   conv_cells = find_convective_cells(refs) 
   closed_cells = close_holes(conv_cells, conv_buffer)
   narrow_conv_cells = remove_wide_cells(refs, closed_cells)
-  narrow_conv_cells2 = remove_adjacent_cells(refs, narrow_conv_cells)
+  narrow_conv_cells2 = remove_adjacent_cells(refs, narrow_conv_cells) 
   merged_cells = connect_cells(narrow_conv_cells2, core_buffer) 
   labeled_ncfr = check_axis(refs, merged_cells)  
-  labeled_cores = extract_cores(refs, labeled_ncfr, conv_buffer, 50)
+  labeled_cores = extract_cores(refs, labeled_ncfr, conv_buffer)
 
   # Check if the algorithm returns nothing and that the timestep is later in the animation
-  if not any(map(any, labeled_cores)) and i >= 40:
+  if not any(map(any, labeled_cores)):
     # Run segmentation procedure again but stop at Step 4 and remove small cells
     conv_cells = find_convective_cells(refs)
     closed_cells = close_holes(conv_cells, conv_buffer)
@@ -179,7 +179,7 @@ def main():
   san_diego = gpd.read_file("SD_R_A_Fashion_Valley.geojson") 
 
   # Load NEXRAD data from netcdf4 file
-  date_fp = "19980203" 
+  date_fp = "20021228_29" 
   ncfile = '/media/jntp/D2BC15A1BC1580E1/NCFRs/' + date_fp + '.nc'
   nexdata = Dataset(ncfile, mode = 'r')
   print(nexdata)
@@ -188,7 +188,10 @@ def main():
   lons = nexdata['Longitude'][:][:]
   lats = nexdata['Latitude'][:][:]
  
-  ref_refs = nexdata['Reflectivity'][:] # reflectivities, used for animation
+  refs = nexdata['Reflectivity'][:] # reflectivities, used for animation
+  # temp code; delete later
+  print("ntim:", len(refs))
+  ref_refs = refs[40:51]
   years = nexdata['Year'][:]
   months = nexdata['Month'][:]
   days = nexdata['Day'][:]
@@ -333,15 +336,15 @@ def main():
 
   ## Run the run_output_stats function
   # Define and starting and ending timestep
-  start_ts = 0
-  end_ts = len(ref_refs)
+  # start_ts = 0
+  # end_ts = len(ref_refs)
 
   # Check whether to run the function once or multiple times
-  if start_ts == end_ts:
-    run_output_stats(start_ts) # run the function once
-  else:
-    for i in range(start_ts, end_ts):
-      run_output_stats(i)
+  # if start_ts == end_ts:
+    # run_output_stats(start_ts) # run the function once
+  # else:
+    # for i in range(start_ts, end_ts):
+      # run_output_stats(i)
 
   "--------------Below is the code for outputting NCFR Propagation Statistics---------------"
 
@@ -505,9 +508,9 @@ def main():
     return text
     
   # Call animate functions
-  # out_fp1 = "./plots/" + date_fp + ".gif" 
-  # ani1 = FuncAnimation(fig, animate_contour, interval = 100, frames = len(ref_refs))
-  # ani1.save(out_fp1, writer = PillowWriter(fps = 1))
+  out_fp1 = "./plots/" + date_fp + "_40_50" + ".gif"  # remove the quote between date_fp and .gif
+  ani1 = FuncAnimation(fig, animate_contour, interval = 100, frames = len(ref_refs))
+  ani1.save(out_fp1, writer = PillowWriter(fps = 1))
 
   # out_fp2 = "./plots/" + date_fp + "_polygon.gif"
   # ani2 = FuncAnimation(fig, animate_geometries, interval = 100, frames = len(ref_refs))
