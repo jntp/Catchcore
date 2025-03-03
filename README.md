@@ -21,6 +21,6 @@ For NCFR events where the algorithm correctly identifies the NCFR cores for mult
   <li>The start and end timestep</li>
   <li>The start and end position (lat, lon)</li>
   <li>The total distance traveled (km)</li>
-  <li>The direction or azimuth of propagation (degrees)</li>
+  <li>The direction or azimuth of propagation (degree)</li>
   <li>The average speed traveled (m/s)</li>
 </ul>
